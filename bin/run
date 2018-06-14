@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+home=`basedir $0`/..
+
+$home/run.py

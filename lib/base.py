@@ -1,6 +1,6 @@
 #
 #
-import logger
+from .logger import Logger
 
-class Base:
-    log = logger.insance
+class Base(object):
+    pass

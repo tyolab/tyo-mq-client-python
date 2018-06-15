@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-#from lib import message_queue
+from lib.message_queue import MessageQueue
 
-server="localhost"
+mq = MessageQueue()
+
+server='localhost'
 
 print("Connecting to the tyo-mq server: {}".format(server))

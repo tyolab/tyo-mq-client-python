@@ -16,8 +16,8 @@ print("Connecting to the tyo-mq server: {}".format(server))
 
 # Test Subscriber
 subscriber = mq.createSubscriber("TYO Lab Tester")
-subscriber.connect()
+subscriber.connect(4)
 
 # Test Producer
-producer = mq.("TYO Lab")
-producer.connect()
+producer = mq.createPublisher("TYO Lab")
+producer.connect(4)

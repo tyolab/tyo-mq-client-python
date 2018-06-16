@@ -1,9 +1,11 @@
 #
 # 
 from .constants import Constants
+from .logger import Logger
 from .base import Base
 
 from socketIO_client import SocketIO, BaseNamespace
+import uuid
 
 class SocketListener(BaseNamespace):
 
@@ -18,6 +20,7 @@ class SocketListener(BaseNamespace):
 
 
 class Socket(Base):
+    
     #
     def __init__(self, host=None, port=None, protocol=None):
         self.autoreconnect = True
@@ -33,8 +36,39 @@ class Socket(Base):
 
         if (protocol is not None):
             self.protocol = protocol
+
+        self.socket = None
+        self.connected = False
+        self.id = uuid.uuid4()
+        self.name = Constants.ANONYMOUS;
+        self.alias = None
+
+    def on_connect(self):
+        print('connect')
+
+    def on_disconnect(self):
+        print('disconnect')
+
+    def on_reconnect(self):
+        print('reconnect')
+        
     #
-    def connect(self):
-        with SocketIO(self.host, self.port, SocketListener) as socketIO:
-            socketIO.emit('aaa')
-            socketIO.wait(seconds=1)
+    def connect(self, duration=-1):
+        # Example
+        # with SocketIO(self.host, self.port, SocketListener) as socketIO:
+        #     socketIO.emit('aaa')
+        #     socketIO.wait(seconds=1)
+        self.socket = SocketIO(self.host, self.port, SocketListener)
+        self.socket.on('connect', self.on_connect)
+        self.socket.on('disconnect', self.on_disconnect)
+        self.socket.on('reconnect', self.on_reconnect)
+
+        if duration == -1 :
+            self.socket.wait()
+        else:
+            self.socket.wait(seconds=duration)
+
+    def get_id(self):
+        return self.id
+
+

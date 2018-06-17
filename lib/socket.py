@@ -39,27 +39,46 @@ class Socket(Base):
 
         self.socket = None
         self.connected = False
-        self.id = uuid.uuid4()
-        self.name = Constants.ANONYMOUS;
+        self.id = str(uuid.uuid4())
+        self.name = Constants.ANONYMOUS
         self.alias = None
 
+        #
+        self.on_connect_listeners = []
+
     def on_connect(self):
-        print('connect')
+        self.connected = True
+        self.socket.on('ERROR', self.__on_error__)
+        Logger.log("connected to message queue server")
+
+        i = 0
+        while (i < len(self.on_connect_listeners)):
+            listener = self.on_connect_listeners[i]
+            listener()
 
     def on_disconnect(self):
-        print('disconnect')
+        self.connected = False
+        #Logger.debug('disconnect')
+        Logger.log("Socket (" + self.get_id() + ") is disconnected")
 
     def on_reconnect(self):
-        print('reconnect')
+        Logger.debug('reconnect')
+
+    def on_error(self):
+        Logger.error('oops, something wrong.')
         
     #
-    def connect(self, duration=-1):
+    def __on_error__(self):
+        pass
+
+    #
+    def connect(self, duration=-1, callback=None):
         # Example
         # with SocketIO(self.host, self.port, SocketListener) as socketIO:
         #     socketIO.emit('aaa')
         #     socketIO.wait(seconds=1)
         self.socket = SocketIO(self.host, self.port, SocketListener)
-        self.socket.on('connect', self.on_connect)
+        self.socket.on('connect', self.on_connect if callback is None  else callback)
         self.socket.on('disconnect', self.on_disconnect)
         self.socket.on('reconnect', self.on_reconnect)
 
@@ -68,7 +87,33 @@ class Socket(Base):
         else:
             self.socket.wait(seconds=duration)
 
+
     def get_id(self):
         return self.id
+
+    def add_on_connect_listener(self, listener):
+        self.on_connect_listeners.append(listener)
+
+    def disconnect(self):
+        if (self.socket is not None and self.connected):
+            self.socket.disconnect()
+
+    def on(self, event, callback):
+        self.socket.on(event, callback)
+
+    def send_message(self, event, msg):
+        if (self.socket is None):
+            raise Exception("Socket isn't ininitalized yet")
+
+        if (self.socket.connected is False):
+            futureFunc = lambda event, msg: self.socket.emit(event, msg)
+
+            if (self.autoreconnect is True):
+                    self.connect(-1, futureFunc)
+            else:
+                raise Exception("Socket is created but not connected")
+        else:
+            self.socket.emit(event, msg)
+
 
 

@@ -32,5 +32,5 @@ class Events(object):
         return 'UNSUBSCRIBE-' + eventStr + '-' + id
 
     @staticmethod
-    def to_onsubscribe__event(id):
+    def to_onsubscribe_event(id):
         return 'SUBSCRIBE-TO' + ("-" + id if (id is not None) else "")

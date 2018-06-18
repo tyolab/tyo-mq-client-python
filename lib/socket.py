@@ -5,6 +5,7 @@ from .logger import Logger
 from .base import Base
 
 from socketIO_client import SocketIO, BaseNamespace
+
 import uuid
 
 class SocketListener(BaseNamespace):
@@ -45,16 +46,24 @@ class Socket(Base):
 
         #
         self.on_connect_listeners = []
+        self.on_error_listener = None
+
+    def send_identification_info(self):
+        pass        
 
     def on_connect(self):
+        Logger.log("connected to message queue server")
+
         self.connected = True
         self.socket.on('ERROR', self.__on_error__)
-        Logger.log("connected to message queue server")
+
+        self.send_identification_info()
 
         i = 0
         while (i < len(self.on_connect_listeners)):
             listener = self.on_connect_listeners[i]
             listener()
+            i += 1
 
     def on_disconnect(self):
         self.connected = False
@@ -68,9 +77,16 @@ class Socket(Base):
         Logger.error('oops, something wrong.')
         
     #
-    def __on_error__(self):
-        pass
+    # On TYO-MQ ERROR MESSAGE
+    #
+    def __on_error__(self, msg):
+        if (self.on_error_listener is not None):
+            self.on_error_listener()
+        else:
+            Logger.error(msg)
 
+    #
+    #
     #
     def connect(self, duration=-1, callback=None):
         # Example

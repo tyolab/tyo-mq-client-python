@@ -1,5 +1,7 @@
 #
 #
+from __future__ import print_function
+import sys
 
 class Logger:
     instance = None
@@ -8,25 +10,25 @@ class Logger:
         self.level = level
 
     @staticmethod
-    def log(msg):
-        print (msg)
+    def log(*args, **kwargs):
+        print (args, kwargs)
 
     @staticmethod
-    def error(msg):
-        print (msg)
+    def error(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
 
     @staticmethod
-    def warn(msg):
-        print (msg)
+    def warn(*args, **kwargs):
+        print (args, kwargs)
 
     @staticmethod
-    def verbose(msg):
-        print (msg)
+    def verbose(*args, **kwargs):
+        print (args, kwargs)
 
     @staticmethod
-    def debug(msg):
-        print (msg)
+    def debug(*args, **kwargs):
+        print (args, kwargs)
 
     @staticmethod
-    def info(msg):
-        print (msg)
+    def info(*args, **kwargs):
+        print (args, kwargs)

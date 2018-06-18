@@ -3,8 +3,8 @@
 from .constants import Constants
 from .logger import Logger
 from .base import Base
-
-from socketIO_client import SocketIO, BaseNamespace
+ 
+from .socketIO_client import SocketIO, BaseNamespace
 
 import uuid
 

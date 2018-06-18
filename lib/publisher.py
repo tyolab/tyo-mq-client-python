@@ -24,7 +24,7 @@ class Publisher(Subscriber):
         #
         Logger.debug("creating producer: " + self.name)
         
-    def produce (self, data, event=None) :   
+    def produce (self, data, event=None, method=None) :   
         if (data is None):
              raise Exception("data can't be null")
         
@@ -34,7 +34,7 @@ class Publisher(Subscriber):
             else:
                  event = self.eventDefault   
 
-        message = {"event":event, "message":data, "from":self.name}
+        message = {"event":event, "message":data, "from":self.name, "method":method}
         self.send_message('PRODUCE', message)     
 
     # /**

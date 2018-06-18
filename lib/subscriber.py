@@ -77,11 +77,11 @@ class Subscriber(Socket):
             consumeEventStr = Events.to_consume_event(eventStr)
             self.consumes[consumeEventStr] = lambda obj : lambda obj, eventStr=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, evenStr, callback)
 
-            #futureFunc = lambda obj : self.consumes[consumeEventStr](obj)
-            
-            #self.on(consumeEventStr, futureFunc)
+            # futureFunc = lambda obj : self.consumes[consumeEventStr](obj)
+            # self.on(consumeEventStr, futureFunc)
 
             #DEBUG
+            Logger.debug("setting on event: " + consumeEventStr)
             self.on(consumeEventStr, self.__debug_on_message)
 
     def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe=True):

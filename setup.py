@@ -25,7 +25,7 @@ setup(
     author_email='eric.tang@tyo.com.au',
     url='git@github.com:tyolab/tyo-mq-client-python.git',
     install_requires=[
-        'socketIO-client>=0.7.2',
+        invisibleroads-macros>=0.9.4.4
     ],
     tests_require=[
         'nose',

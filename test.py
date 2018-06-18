@@ -9,6 +9,7 @@ from lib.logger import Logger
 from lib.constants import Constants
 
 import json
+import sys
 
 test = 0
 subscriber = None
@@ -26,13 +27,15 @@ print("Connecting to the tyo-mq server: {}".format(server))
 # socket.connect()
 
 # Test Subscriber
-subscriber = mq.createSubscriber("TYO Lab Tester")
+# subscriber = mq.createSubscriber("TYO Lab Tester")
 
 # Test Producer
 producer = mq.createPublisher("TYO Lab")
+subscriber = producer
 
-def on_message_published(*args):
-    print ("received message")
+def on_message_published(message):
+    print ("received message" + json.dumps(message))
+    sys.exit()
     # if (fromWhom is not None):
     #     print("Received message from", json.dumps(fromWhom))
 
@@ -43,7 +46,7 @@ def on_message_published(*args):
     #     print('test1 failed')
 
     # if (test == 2):
-    subscriber.disconnect()
+    #producer.disconnect()
 
 def check ():
     if (ready[0] and ready[1]):
@@ -53,28 +56,31 @@ def subscriber_on_connect () :
     Logger.log("Subscriber is connected")
     ready[0] = True
     subscriber.subscribe(producer.name, Constants.EVENT_DEFAULT, on_message_published, False)
-    producer.connect(-1)
-
-def on_subscription () :
+    
+def on_subscription (data) :
     print ("received subscription")
+    producer.produce({"message1": "Hello World"})
+    producer.on('test', on_message_published)
+    producer.socket.emit('test')
+    producer.produce({"message2": "Hello World"}, producer.eventDefault, Constants.METHOD_BROADCAST)
 
-def producer_on_connect () : 
+def producer_on_connect () :
+    subscriber_on_connect() 
+
     Logger.log("Producer is connected")
     ready[1] = True
     producer.on_subscription_listener = on_subscription
     producer.on_subscriber_lost(on_subscriber_lost)
-    producer.produce({"message": "Hello World"})
-    producer.on('test', on_message_published)
-    producer.socket.emit('test')
 
 def on_subscriber_lost (data):
     # test += 1
     message = json.dumps(data)
     Logger.log('Informed that connection with a subscriber (' + message["consumer"] + ') was lost')
-    producer.disconnect()
+    #producer.disconnect()
 
-subscriber.add_on_connect_listener(subscriber_on_connect)
+#subscriber.add_on_connect_listener(subscriber_on_connect)
 producer.add_on_connect_listener(producer_on_connect)
 
-subscriber.connect(-1)
+# subscriber.connect(-1)
+producer.connect(-1)
 

@@ -1,0 +1,3 @@
+[submodule "socketIO-client"]
+	path = socketIO-client
+	url = git@github.com:tyolab/socketIO-client.git

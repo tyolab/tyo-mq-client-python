@@ -5,6 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Test File",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test.py"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

@@ -24,6 +24,8 @@ class Socket(Base):
     
     #
     def __init__(self, host=None, port=None, protocol=None):
+        self.type = 'RAW'
+
         self.autoreconnect = True
         if (host is None):
             self.host = 'localhost'
@@ -47,9 +49,16 @@ class Socket(Base):
         #
         self.on_connect_listeners = []
         self.on_error_listener = None
+        self.on_event_func_list = None
+
+    def __apply_on_events (self):
+        if (self.on_event_func_list is not None and len(self.on_event_func_list) > 0):
+            map(lambda func : func(), self.on_event_func_list)
+            del self.on_event_func_list
+            self.on_event_func_list = None
 
     def send_identification_info(self):
-        pass        
+        self.send_message(self.type, {'name': self.name, 'id':self.get_id()})
 
     def on_connect(self):
         Logger.log("connected to message queue server")
@@ -115,7 +124,16 @@ class Socket(Base):
             self.socket.disconnect()
 
     def on(self, event, callback):
-        self.socket.on(event, callback)
+        if (self.socket is None):
+            #raise Exception("Socket is not created yet")
+            if self.on_event_func_list is None:
+                self.on_event_func_list = []
+                futureFunc = lambda : self.__apply_on_events()
+                self.add_on_connect_listener(futureFunc)
+
+            self.on_event_func_list.append(callback)
+        else: 
+            self.socket.on(event, callback)
 
     def send_message(self, event, msg):
         if (self.socket is None):

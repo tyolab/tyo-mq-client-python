@@ -11,19 +11,19 @@ import json
 class Publisher(Subscriber):
     def __init__(self, name, eventDefault=None, host=None, port=None, protocol=None):
         super(Publisher, self).__init__(name, host, port, protocol)
+
+        self.type = 'PRODUCER'
         self.eventDefault = eventDefault if eventDefault is not None else Constants.EVENT_DEFAULT
         self.on_subscription_listener = None
         self.subscribers = {}
 
         # // Initialisation
-        self.add_on_connect_listener(self.set_on_subscription_listener())
+        futureFunc = lambda : self.set_on_subscription_listener()
+        self.add_on_connect_listener(futureFunc)
 
         #
         Logger.debug("creating producer: " + self.name)
-    
-    def send_identification_info (self) :
-        self.send_message('PRODUCER', {'name': self.name})
-
+        
     def produce (self, data, event=None) :   
         if (data is None):
              raise Exception("data can't be null")

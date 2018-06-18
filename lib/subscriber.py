@@ -3,18 +3,23 @@ from .logger import Logger
 from .events import Events
 from .constants import Constants
 
+#
+import json
+
 class Subscriber(Socket):
 
     #
     def __init__(self, name=None, host=None, port=None, protocol=None):
         super(Subscriber, self).__init__(host, port, protocol)
+
+        self.type = 'CONSUMER'
         self.name = name if name is not None else Constants.ANONYMOUS
         self.consumes = None
         self.subscriptions = None
         Logger.debug("creating subscriber: " + self.name)
 
-    def send_identification_info(self):
-        self.send_message('CONSUMER', {'name': self.name})
+    # def send_identification_info(self):
+    #     self.send_message(, {'name': self.name})
 
     def __apply_subscritptions(self):
         if (len(self.subscriptions) > 0):
@@ -25,6 +30,16 @@ class Subscriber(Socket):
     def __trigger_consume_event(self, obj, eventStr, callback) :
         if obj["event"] == eventStr :
             callback(obj["message"], obj["from"])
+
+    #
+    # For debug
+    # 
+    # def __debug_on_message(self, event, message, callback):
+    #     Logger.debug(event, ":", json.dumps(message))
+    #     callback(message)
+
+    def __debug_on_message(self, *args):
+        Logger.debug('received message', args)
 
     def __subscribe_internal(self, who, event, onConsumeCallback):    
             eventStr = None
@@ -62,9 +77,12 @@ class Subscriber(Socket):
             consumeEventStr = Events.to_consume_event(eventStr)
             self.consumes[consumeEventStr] = lambda obj : lambda obj, eventStr=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, evenStr, callback)
 
-            futureFunc = lambda obj : self.consumes[consumeEventStr](obj)
-        
-            self.on(consumeEventStr, futureFunc)
+            #futureFunc = lambda obj : self.consumes[consumeEventStr](obj)
+            
+            #self.on(consumeEventStr, futureFunc)
+
+            #DEBUG
+            self.on(consumeEventStr, self.__debug_on_message)
 
     def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe=True):
 

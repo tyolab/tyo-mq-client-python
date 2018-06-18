@@ -10,6 +10,7 @@ from lib.constants import Constants
 
 import json
 import sys
+import os
 
 test = 0
 subscriber = None
@@ -35,7 +36,9 @@ subscriber = producer
 
 def on_message_published(message):
     print ("received message" + json.dumps(message))
-    sys.exit()
+    # sys.exit()
+    os._exit(1)
+    
     # if (fromWhom is not None):
     #     print("Received message from", json.dumps(fromWhom))
 

@@ -23,6 +23,9 @@ class Publisher(Subscriber):
 
         #
         Logger.debug("creating producer: " + self.name)
+
+    def broadcast (self, data, event=None):
+        self.produce(data, event, Constants.METHOD_BROADCAST)
         
     def produce (self, data, event=None, method=None) :   
         if (data is None):

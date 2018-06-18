@@ -4,7 +4,7 @@ from .events import Events
 from .constants import Constants
 
 #
-import json
+import json, sys
 
 class Subscriber(Socket):
 
@@ -28,18 +28,25 @@ class Subscriber(Socket):
             self.subscriptions = None
 
     def __trigger_consume_event(self, obj, eventStr, callback) :
-        if obj["event"] == eventStr :
-            callback(obj["message"], obj["from"])
+        #if obj["event"] == eventStr :
+        callback(obj["message"])
 
     #
     # For debug
     # 
-    # def __debug_on_message(self, event, message, callback):
+    def __debug_on_message(self, event, message):
+        Logger.debug('received message', event, message)
+        try:
+            func = self.consumes[event]
+            self.__trigger_consume_event(message, event, func)
+        except :
+            Logger.error("Ooops, something wrong", sys.exc_info()[0])
+            raise
     #     Logger.debug(event, ":", json.dumps(message))
     #     callback(message)
 
-    def __debug_on_message(self, *args):
-        Logger.debug('received message', args)
+    # def __debug_on_message(self, *args):
+    #     Logger.debug('received message', args)
 
     def __subscribe_internal(self, who, event, onConsumeCallback):    
             eventStr = None
@@ -75,14 +82,17 @@ class Subscriber(Socket):
                 self.consumes = {}
     
             consumeEventStr = Events.to_consume_event(eventStr)
-            self.consumes[consumeEventStr] = lambda obj : lambda obj, eventStr=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, evenStr, callback)
+            self.consumes[consumeEventStr] = onConsumeCallback #lambda message, fromWhom : onConsumeCallback(message, fromWhom)
+            #lambda obj : lambda obj, event=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, event, callback)
 
-            # futureFunc = lambda obj : self.consumes[consumeEventStr](obj)
-            # self.on(consumeEventStr, futureFunc)
-
+            #futureFunc = lambda data : (lambda data, event=consumeEventStr: self.consumes[event](data))(data)
+            #futureFunc = lambda data, eventStr=consumeEventStr : self.consumes[eventStr](data)
             #DEBUG
             Logger.debug("setting on event: " + consumeEventStr)
-            self.on(consumeEventStr, self.__debug_on_message)
+            #self.on(consumeEventStr, self.__debug_on_message)
+            #futureFunc = lambda data : self.__debug_on_message(data)
+            futureFunc = lambda data, event=consumeEventStr : self.__debug_on_message(event, data)
+            self.on(consumeEventStr, futureFunc)
 
     def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe=True):
 

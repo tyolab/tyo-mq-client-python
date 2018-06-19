@@ -3,10 +3,10 @@ import logging
 logging.getLogger('socketIO-client').setLevel(logging.DEBUG)
 logging.basicConfig()
 
-from lib.message_queue import MessageQueue
-from lib.socket import Socket
-from lib.logger import Logger
-from lib.constants import Constants
+from tyo_mq_client.message_queue import MessageQueue
+from tyo_mq_client.socket import Socket
+from tyo_mq_client.logger import Logger
+from tyo_mq_client.constants import Constants
 
 import json
 import sys

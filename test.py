@@ -38,18 +38,6 @@ def on_message_published(message):
     print ("received message" + json.dumps(message))
     # sys.exit()
     os._exit(1)
-    
-    # if (fromWhom is not None):
-    #     print("Received message from", json.dumps(fromWhom))
-
-    # test += 1
-    # if (data == 'test-a'):
-    #     print('test1 succeeded!')
-    # else:
-    #     print('test1 failed')
-
-    # if (test == 2):
-    #producer.disconnect()
 
 def check ():
     if (ready[0] and ready[1]):
@@ -76,10 +64,8 @@ def producer_on_connect () :
     producer.on_subscriber_lost(on_subscriber_lost)
 
 def on_subscriber_lost (data):
-    # test += 1
     message = json.dumps(data)
     Logger.log('Informed that connection with a subscriber (' + message["consumer"] + ') was lost')
-    #producer.disconnect()
 
 #subscriber.add_on_connect_listener(subscriber_on_connect)
 producer.add_on_connect_listener(producer_on_connect)

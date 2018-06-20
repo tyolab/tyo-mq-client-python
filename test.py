@@ -32,6 +32,8 @@ print("Connecting to the tyo-mq server: {}".format(server))
 
 # Test Producer
 producer = mq.createPublisher("TYO Lab")
+producer.host = "https://c-its-emulator.herokuapp.com:443"
+producer.port = None
 subscriber = producer
 
 def on_message_published(message):
@@ -71,5 +73,5 @@ def on_subscriber_lost (data):
 producer.add_on_connect_listener(producer_on_connect)
 
 # subscriber.connect(-1)
-producer.connect(-1)
+producer.connect(-1, transports=['websocket'])
 

@@ -4,11 +4,11 @@ from .constants import Constants
 from .logger import Logger
 from .base import Base
  
-from socketIO_client import SocketIO, BaseNamespace
+from socketIO_client import SocketIO, BaseNamespace, LoggingNamespace
 
 import uuid
 
-class SocketListener(BaseNamespace):
+class SocketListener(LoggingNamespace):
 
     def on_connect(self):
         print('[Connected]')
@@ -97,12 +97,12 @@ class Socket(Base):
     #
     #
     #
-    def connect(self, duration=-1, callback=None):
+    def connect(self, duration=-1, callback=None, cls=SocketListener, **kw):
         # Example
         # with SocketIO(self.host, self.port, SocketListener) as socketIO:
-        #     socketIO.emit('aaa')
+        #     socketIO.emit('event')
         #     socketIO.wait(seconds=1)
-        self.socket = SocketIO(self.host, self.port, SocketListener)
+        self.socket = SocketIO(self.host, self.port, cls, kw)
         self.socket.on('connect', self.on_connect if callback is None  else callback)
         self.socket.on('disconnect', self.on_disconnect)
         self.socket.on('reconnect', self.on_reconnect)

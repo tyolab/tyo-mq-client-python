@@ -11,33 +11,27 @@ class MessageQueue(object):
 
     def __init__(self, host=None, port=None, protocol=None):
         # The SocketIO instance
-        if not host is None:
-            self.host = host
+        self.host = host
+        self.port = port
+        self.protocol = protocol            
 
-        if port is not None:
-            self.port = port
-
-    @staticmethod
-    def createSocket():
-        mySocket = Socket()
-
+    def createSocket(self, host=None, port=None, protocol=None):
+        mySocket = Socket(host if host is not None else self.host, port if port is not None else self.port, protocol if protocol is not None else self.protocol)
         return mySocket
 
     #/**
      #* private function
      #*/
-    @staticmethod
-    def createConsumerPrivate(name, host=None, port=None, protocol=None): 
-        consumer = Subscriber(name, host, port, protocol)
+    def __createConsumerPrivate(self, name, host=None, port=None, protocol=None): 
+        consumer = Subscriber(name, host if host is not None else self.host, port if port is not None else self.port, protocol if protocol is not None else self.protocol)
         return consumer
 
 
     # /**
     #  * Create a consumer
     #  */
-    @classmethod
-    def createConsumer(cls, name, host=None, port=None, protocol=None):
-        return cls.createConsumerPrivate(name, host, port, protocol)
+    def createConsumer(self, name, host=None, port=None, protocol=None):
+        return self.__createConsumerPrivate(name, host, port, protocol)
 
     # /**
     #  * Alias of createConsumer
@@ -46,16 +40,19 @@ class MessageQueue(object):
     def createSubscriber(self, name, host=None, port=None, protocol=None):
         return self.createConsumer(name, host, port, protocol)
 
-    @staticmethod
-    def createProducerPrivate (name, eventDefault=None, host=None, port=None, protocol=None):
-        producer = Publisher(name, eventDefault, host, port, protocol)
+    def __createProducerPrivate (self, name, eventDefault=None, host=None, port=None, protocol=None):
+        h = host if host is not None else self.host
+        p = port if port is not None else self.port
+        ptc = protocol if protocol is not None else self.protocol
+
+        producer = Publisher(name, eventDefault, h, p, ptc)
         return producer
      
     # /**
     #  * Create a producer
     #  */
     def createProducer (self, name, eventDefault=None, host=None, port=None, protocol=None):
-        return  self.createProducerPrivate(name, eventDefault, host, port, protocol)
+        return  self.__createProducerPrivate(name, eventDefault, host, port, protocol)
 
     def createPublisher (self, name, eventDefault=None, host=None, port=None, protocol=None):
         return self.createProducer(name, eventDefault, host, port, protocol)

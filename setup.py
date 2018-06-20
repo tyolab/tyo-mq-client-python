@@ -10,7 +10,7 @@ DESCRIPTION = '\n\n'.join(LOAD_TEXT(_) for _ in [
 ])
 setup(
     name='tyo-mq-client',
-    version='0.0.5',
+    version='0.0.6',
     description='A tyo-mq client library',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',

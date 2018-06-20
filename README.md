@@ -18,10 +18,10 @@ mq.start();
 ### Creating a message producer and consumer
 
 ```python
-from tyo-mq-client.lib.message_queue import MessageQueue
-from tyo-mq-client.lib.socket import Socket
-from tyo-mq-client.lib.logger import Logger
-from tyo-mq-client.lib.constants import Constants
+from tyo_mq_client.message_queue import MessageQueue
+from tyo_mq_client.socket import Socket
+from tyo_mq_client.logger import Logger
+from tyo_mq_client.constants import Constants
 
 subscriber = None
 producer = None

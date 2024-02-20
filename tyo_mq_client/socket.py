@@ -4,7 +4,9 @@ from .constants import Constants
 from .logger import Logger
 from .base import Base
  
-from socketIO_client import SocketIO, BaseNamespace, LoggingNamespace
+# from the old library which is not working anymore
+# from socketIO_client import SocketIO, BaseNamespace, LoggingNamespace
+import socketio
 
 import uuid
 

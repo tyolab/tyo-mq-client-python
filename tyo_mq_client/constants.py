@@ -1,4 +1,5 @@
 #
+# Constants for the tyo_mq_client package
 #
 
 class Constants:
@@ -12,3 +13,4 @@ class Constants:
 
     # SERVER DEFAULTS
     DEFAULT_PORT = 17352
+    DEFAULT_PROTOCOL = 'http'

@@ -32,8 +32,8 @@ print("Connecting to the tyo-mq server: {}".format(server))
 
 # Test Producer
 producer = mq.createPublisher("TYO Lab")
-producer.host = "https://c-its-emulator.herokuapp.com:443"
-producer.port = None
+# producer.host = "https://c-its-emulator.herokuapp.com:443"
+# producer.port = None
 subscriber = producer
 
 def on_message_published(message):

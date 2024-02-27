@@ -1,4 +1,4 @@
-from .socket import Socket
+from .socket import SocketInstance
 from .logger import Logger
 from .events import Events
 from .constants import Constants
@@ -6,7 +6,7 @@ from .constants import Constants
 #
 import json, sys
 
-class Subscriber(Socket):
+class Subscriber(SocketInstance):
 
     #
     def __init__(self, name=None, host=None, port=None, protocol=None):

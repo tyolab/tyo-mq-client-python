@@ -10,17 +10,7 @@ import socketio
 
 import uuid
 
-class SocketListener(LoggingNamespace):
-
-    def on_connect(self):
-        print('[Connected]')
-
-    def on_reconnect(self):
-        print('[Reconnected]')
-
-    def on_disconnect(self):
-        print('[Disconnected]')
-
+sio = socketio.Client()
 
 class Socket(Base):
     
@@ -41,6 +31,8 @@ class Socket(Base):
 
         if (protocol is not None):
             self.protocol = protocol
+        else:
+            self.protocol = Constants.DEFAULT_PROTOCOL
 
         self.socket = None
         self.connected = False
@@ -53,6 +45,45 @@ class Socket(Base):
         self.on_error_listener = None
         self.on_event_func_list = None
 
+
+class SocketInitiator():
+
+    socket_instance = None
+
+    def __init__(self, socket_base: Socket):
+        SocketInitiator.socket_instance = socket_base
+
+    def connect(self, protocol, host, port):
+        sio.connect(protocol + '://' + host + ':' + str(port))
+
+    @sio.on('connect')
+    def on_connect():
+        print('[Connected]')
+        SocketInitiator.socket_instance.on_connect()
+
+    @sio.on('reconnect')
+    def on_reconnect(self):
+        print('[Reconnected]')
+        SocketInitiator.socket_instance.on_reconnect()
+
+    @sio.on('disconnect')
+    def on_disconnect(self):
+        print('[Disconnected]')
+        SocketInitiator.socket_instance.on_disconnect()
+
+    @sio.on('error')
+    def on_error(self):
+        Logger.error('oops, something wrong.')
+        SocketInitiator.socket_instancee.__on_error__()
+
+class SocketInstance(Socket):
+
+    def __init__(self, host=None, port=None, protocol=None):
+        super().__init__(host, port, protocol)
+
+        self.socket = sio
+        self.initiator = SocketInitiator(self)
+
     def __apply_on_events (self):
         if (self.on_event_func_list is not None and len(self.on_event_func_list) > 0):
             map(lambda func : func(), self.on_event_func_list)
@@ -62,6 +93,7 @@ class Socket(Base):
     def send_identification_info(self):
         self.send_message(self.type, {'name': self.name, 'id':self.get_id()})
 
+    
     def on_connect(self):
         Logger.log("connected to message queue server")
 
@@ -84,8 +116,6 @@ class Socket(Base):
     def on_reconnect(self):
         Logger.debug('reconnect')
 
-    def on_error(self):
-        Logger.error('oops, something wrong.')
         
     #
     # On TYO-MQ ERROR MESSAGE
@@ -99,20 +129,23 @@ class Socket(Base):
     #
     #
     #
-    def connect(self, duration=-1, callback=None, cls=SocketListener, **kw):
+    def connect(self, duration=-1, callback=None, **kw):
         # Example
         # with SocketIO(self.host, self.port, SocketListener) as socketIO:
         #     socketIO.emit('event')
         #     socketIO.wait(seconds=1)
-        self.socket = SocketIO(self.host, self.port, cls, kw)
-        self.socket.on('connect', self.on_connect if callback is None  else callback)
-        self.socket.on('disconnect', self.on_disconnect)
-        self.socket.on('reconnect', self.on_reconnect)
+        # self.socket = SocketIO(self.host, self.port, cls, kw)
+        # self.socket.on('connect', self.on_connect if callback is None  else callback)
+        # self.socket.on('disconnect', self.on_disconnect)
+        # self.socket.on('reconnect', self.on_reconnect)
 
-        if duration == -1 :
-            self.socket.wait()
-        else:
-            self.socket.wait(seconds=duration)
+        
+
+        # if duration == -1 :
+        #     self.socket.wait()
+        # else:
+        #     self.socket.wait(seconds=duration)
+        self.initiator.connect(self.protocol, self.host, self.port)
 
 
     def get_id(self):
@@ -139,7 +172,7 @@ class Socket(Base):
 
     def send_message(self, event, msg):
         if (self.socket is None):
-            raise Exception("Socket isn't ininitalized yet")
+            raise Exception("Socket isn't initialized yet")
 
         if (self.socket.connected is False):
             futureFunc = lambda event, msg: self.socket.emit(event, msg)

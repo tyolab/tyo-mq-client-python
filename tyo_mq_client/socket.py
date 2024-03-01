@@ -10,8 +10,6 @@ import socketio
 
 import uuid
 
-sio = socketio.Client()
-
 class Socket(Base):
     
     #
@@ -49,12 +47,16 @@ class Socket(Base):
 class SocketInitiator():
 
     socket_instance = None
+    sio = socketio.Client()
 
     def __init__(self, socket_base: Socket):
         SocketInitiator.socket_instance = socket_base
+        SocketInitiator.socket_instance.socket = SocketInitiator.sio
+        # SocketInitiator.socket_instance.socket.on('connect', self.on_connect)
 
     def connect(self, protocol, host, port):
-        sio.connect(protocol + '://' + host + ':' + str(port))
+        connection_str = protocol + '://' + host + ':' + str(port)
+        SocketInitiator.socket_instance.socket.connect(connection_str)
 
     @sio.on('connect')
     def on_connect():
@@ -71,7 +73,7 @@ class SocketInitiator():
         print('[Disconnected]')
         SocketInitiator.socket_instance.on_disconnect()
 
-    @sio.on('error')
+    @sio.on('ERROR')
     def on_error(self):
         Logger.error('oops, something wrong.')
         SocketInitiator.socket_instancee.__on_error__()
@@ -81,7 +83,7 @@ class SocketInstance(Socket):
     def __init__(self, host=None, port=None, protocol=None):
         super().__init__(host, port, protocol)
 
-        self.socket = sio
+        # self.socket = sio
         self.initiator = SocketInitiator(self)
 
     def __apply_on_events (self):
@@ -174,15 +176,15 @@ class SocketInstance(Socket):
         if (self.socket is None):
             raise Exception("Socket isn't initialized yet")
 
-        if (self.socket.connected is False):
-            futureFunc = lambda event, msg: self.socket.emit(event, msg)
+        # if (self.socket.connected is False):
+        #     futureFunc = lambda event, msg: self.socket.emit(event, msg)
 
-            if (self.autoreconnect is True):
-                    self.connect(-1, futureFunc)
-            else:
-                raise Exception("Socket is created but not connected")
-        else:
-            self.socket.emit(event, msg)
+        #     if (self.autoreconnect is True):
+        #             self.connect(-1, futureFunc)
+        #     else:
+        #         raise Exception("Socket is created but not connected")
+        # else:
+        self.socket.emit(event, msg)
 
 
 

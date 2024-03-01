@@ -75,3 +75,5 @@ producer.add_on_connect_listener(producer_on_connect)
 # subscriber.connect(-1)
 producer.connect(-1, transports=['websocket'])
 
+Logger.log("Waiting for connection to be established")
+producer.socket.wait()

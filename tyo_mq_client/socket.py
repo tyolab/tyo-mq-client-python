@@ -76,7 +76,12 @@ class SocketInitiator():
     @sio.on('ERROR')
     def on_error(self):
         Logger.error('oops, something wrong.')
-        SocketInitiator.socket_instancee.__on_error__()
+        SocketInitiator.socket_instance.__on_error__()
+
+    @sio.on('*')
+    def any_event(event, sid, data):
+        print('received event', event, sid, data)
+        # SocketInitiator.socket_instance.on(event, data)
 
 class SocketInstance(Socket):
 

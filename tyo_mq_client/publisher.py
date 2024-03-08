@@ -13,7 +13,7 @@ class Publisher(Subscriber):
         super(Publisher, self).__init__(name, host, port, protocol)
 
         self.type = 'PRODUCER'
-        self.eventDefault = eventDefault if eventDefault is not None else Constants.EVENT_DEFAULT
+        self.eventDefault = eventDefault if eventDefault is not None else Events.to_event_string(Constants.EVENT_DEFAULT, self.name)
         self.on_subscription_listener = None
         self.subscribers = {}
 
@@ -37,7 +37,7 @@ class Publisher(Subscriber):
             else:
                  event = self.eventDefault   
 
-        message = {"event":event, "message":data, "from":self.name, "method":method}
+        message = {"event":event, "message":data, "from":self.name, "method":method if method is not None else Constants.METHOD_UNICAST}
         self.send_message('PRODUCE', message)     
 
     # /**

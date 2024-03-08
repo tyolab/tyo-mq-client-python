@@ -21,7 +21,7 @@ class Subscriber(SocketInstance):
     # def send_identification_info(self):
     #     self.send_message(, {'name': self.name})
 
-    def __apply_subscritptions(self):
+    def __apply_subscriptions(self):
         if (len(self.subscriptions) > 0):
             map(lambda func : func(), self.subscriptions)
             del self.subscriptions
@@ -48,20 +48,22 @@ class Subscriber(SocketInstance):
     # def __debug_on_message(self, *args):
     #     Logger.debug('received message', args)
 
-    def __subscribe_internal(self, who, event, onConsumeCallback):    
+    def __subscribe_internal(self, who, event = None, onConsumeCallback = None):    
             eventStr = None
+            is_all = False
             if (event is not None):
                 eventStr = Events.to_event_string(event)
             else:
-                eventStr = who + "-ALL"
+                eventStr = Constants.EVENT_ALL
+                is_all = True
 
             # /**
             #  * @todo
             #  * 
             #  * deal with the ALL events later
             #  */
-    
-            sendSubscriptionMessage = lambda event=eventStr, who=who, name=self.name : self.send_message('SUBSCRIBE', {"event":event, "producer":who, "consumer":name})
+            scope_str = Constants.SCOPE_ALL if is_all else Constants.SCOPE_DEFAULT
+            sendSubscriptionMessage = lambda event=eventStr, who=who, name=self.name : self.send_message('SUBSCRIBE', {"event":event, "producer":who, "consumer":name, "scope":scope_str})
 
             # // On Connect Message will be trigger by system
             if (self.connected):
@@ -69,32 +71,28 @@ class Subscriber(SocketInstance):
             else:
                 if self.subscriptions is None:
                     self.subscriptions = []
-                    futureFunc = lambda : self.__apply_subscritptions()
+                    futureFunc = lambda : self.__apply_subscriptions()
                     self.add_on_connect_listener(futureFunc)
 
                 self.subscriptions.append(sendSubscriptionMessage)
-            # // the connection should be ready before we subscribe the message
-            # // self.on('connect', function ()  {
-            # //     sendSubscriptionMessage()
-            # // })
-    
+
             if (self.consumes is None):
                 self.consumes = {}
     
-            consumeEventStr = Events.to_consume_event(eventStr)
-            self.consumes[consumeEventStr] = onConsumeCallback #lambda message, fromWhom : onConsumeCallback(message, fromWhom)
+            consumerEventStr = Events.to_consumer_event(eventStr)
+            self.consumes[consumerEventStr] = onConsumeCallback #lambda message, fromWhom : onConsumeCallback(message, fromWhom)
             #lambda obj : lambda obj, event=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, event, callback)
 
             #futureFunc = lambda data : (lambda data, event=consumeEventStr: self.consumes[event](data))(data)
             #futureFunc = lambda data, eventStr=consumeEventStr : self.consumes[eventStr](data)
             #DEBUG
-            Logger.debug("setting on event: " + consumeEventStr)
+            Logger.debug("setting on event: " + consumerEventStr)
             #self.on(consumeEventStr, self.__debug_on_message)
             #futureFunc = lambda data : self.__debug_on_message(data)
-            futureFunc = lambda data, event=consumeEventStr : self.__debug_on_message(event, data)
-            self.on(consumeEventStr, futureFunc)
+            futureFunc = lambda data, event=consumerEventStr : self.__debug_on_message(event, data)
+            self.on(consumerEventStr, futureFunc)
 
-    def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe=True):
+    def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe = True):
 
         resubscribeListener = lambda who=who, eventStr=event, callback=onConsumeCallback: self.__subscribe_internal(who, eventStr, callback)
 
@@ -109,7 +107,7 @@ class Subscriber(SocketInstance):
     #  * If an event name is not provided, then we subscribe all the messages from the producer
     #  */
 
-    def subscribe (self, who, event, onConsumeCallback, reconcect=True):
+    def subscribe (self, who, event, onConsumeCallback, reconcect = True):
         self.resubscribeWhenReconnect(who, event, onConsumeCallback, reconcect)
 
     # /**

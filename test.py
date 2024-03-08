@@ -32,6 +32,7 @@ print("Connecting to the tyo-mq server: {}".format(server))
 
 # Test Producer
 producer = mq.createPublisher("TYO Lab")
+event = "tyo-lab-event-test"
 # producer.host = "https://c-its-emulator.herokuapp.com:443"
 # producer.port = None
 subscriber = producer
@@ -48,22 +49,22 @@ def check ():
 def subscriber_on_connect () :
     Logger.log("Subscriber is connected")
     ready[0] = True
-    subscriber.subscribe(producer.name, Constants.EVENT_DEFAULT, on_message_published, False)
+    subscriber.subscribe(producer.name, event, on_message_published, False)
     
 def on_subscription (data) :
     print ("received subscription")
     producer.produce({"message1": "Hello World"})
     producer.on('test', on_message_published)
     producer.socket.emit('test')
-    producer.produce({"message2": "Hello World"}, producer.eventDefault, Constants.METHOD_BROADCAST)
+    producer.produce({"message2": "Hello World"}, event, Constants.METHOD_BROADCAST)
 
 def producer_on_connect () :
-    subscriber_on_connect() 
-
     Logger.log("Producer is connected")
     ready[1] = True
     producer.on_subscription_listener = on_subscription
     producer.on_subscriber_lost(on_subscriber_lost)
+
+    subscriber_on_connect() 
 
 def on_subscriber_lost (data):
     message = json.dumps(data)

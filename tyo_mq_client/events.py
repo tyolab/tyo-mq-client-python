@@ -23,8 +23,8 @@ from .constants import Constants
 
     # public static string to_consumer_event(string event_name, string prefix, bool is_all = false) {
     #     if (is_all)
-    #         return to_event_string(event_name, prefix.ToLower());
-    #     return to_event_string(event_name, prefix).ToLower();
+    #         return to_event_string(event_name, prefix.lower());
+    #     return to_event_string(event_name, prefix).lower();
     # }
 
     # public static string to_ondisconnect_event(string id) {
@@ -48,7 +48,7 @@ from .constants import Constants
 
     # public static string to_consumer_all_event (string producer) {
     #     // return 'producer + "-ALL";
-    #     return to_event_string(producer.ToLower(), null, Constants.EVENT_ALL);
+    #     return to_event_string(producer.lower(), null, Constants.EVENT_ALL);
     # }
 
 class Events(object):
@@ -65,29 +65,35 @@ class Events(object):
         # }
         # else 
         #     throw new Error ('Unknown event object: should be a string or object with event string')
-        return (None if (prefix is None) else (prefix + '-')) + event_name + (None if (suffix is None) else ('-' + suffix))
-
-    @classmethod
-    def to_consume_event(cls, event):
-        return cls.to_event_string(event, 'CONSUME')
+        return ('' if (prefix is None) else (prefix + '-')) + event_name + ('' if (suffix is None) else ('-' + suffix))
 
     @staticmethod
-    def to_ondisconnect_event(cls, id):
-        # return 'DISCONNECT-' + id
-        return cls.to_event_string(id, 'DISCONNECT')
-
-    @classmethod
-    def to_onunsubscribe_event(cls, event, id):
-        # eventStr = cls.to_event_string(event)
-        # return 'UNSUBSCRIBE-' + eventStr + '-' + id
-        return cls.to_event_string(event, 'UNSUBSCRIBE', id)
-
-    @staticmethod
-    def to_onsubscribe_event(cls, id):
-        # return 'SUBSCRIBE-TO' + ("-" + id if (id is not None) else "")
-        return cls.to_event_string('TO', 'SUBSCRIBE', id)
+    def to_consume_event(event):
+        return Events.to_event_string(event, 'CONSUME')
     
     @staticmethod
-    def to_consumer_all_event (cls, producer):
+    def to_consumer_event(event_name, prefix = None, is_all = False):
+        if (is_all is True):
+            return Events.to_event_string(event_name, (None if (prefix is None) else prefix.lower()))
+        return Events.to_event_string(event_name, prefix).lower()
+
+    @staticmethod
+    def to_ondisconnect_event(id):
+        # return 'DISCONNECT-' + id
+        return Events.to_event_string(id, 'DISCONNECT')
+
+    @staticmethod
+    def to_onunsubscribe_event(event, id):
+        # eventStr = Events.to_event_string(event)
+        # return 'UNSUBSCRIBE-' + eventStr + '-' + id
+        return Events.to_event_string(event, 'UNSUBSCRIBE', id)
+
+    @staticmethod
+    def to_onsubscribe_event(id):
+        # return 'SUBSCRIBE-TO' + ("-" + id if (id is not None) else "")
+        return Events.to_event_string('TO', 'SUBSCRIBE', id)
+    
+    @staticmethod
+    def to_consumer_all_event (producer):
         # return 'producer + "-ALL"
-        return cls.to_event_string(producer.lower(), None, Constants.EVENT_ALL)
+        return Events.to_event_string(producer.lower(), None, Constants.EVENT_ALL)

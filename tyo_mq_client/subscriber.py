@@ -22,7 +22,7 @@ class Subscriber(SocketInstance):
     #     self.send_message(, {'name': self.name})
 
     def __apply_subscriptions(self):
-        if (len(self.subscriptions) > 0):
+        if (self.subscriptions is not None and len(self.subscriptions) > 0):
             map(lambda func : func(), self.subscriptions)
             del self.subscriptions
             self.subscriptions = None

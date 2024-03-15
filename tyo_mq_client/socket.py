@@ -46,40 +46,43 @@ class Socket(Base):
 
 class SocketInitiator():
 
-    socket_instance = None
-    sio = socketio.Client()
+    # socket_instance = None
+    # sio = socketio.Client()
 
     def __init__(self, socket_base: Socket):
-        SocketInitiator.socket_instance = socket_base
-        SocketInitiator.socket_instance.socket = SocketInitiator.sio
+        self.socket_instance = socket_base
+        self.socket_instance.socket = socketio.Client(); # SocketInitiator.sio
+        self.socket_instance.on('connect', self.on_connect)
+        self.socket_instance.on('*', self.any_event)
+        
         # SocketInitiator.socket_instance.socket.on('connect', self.on_connect)
 
     def connect(self, protocol, host, port):
         connection_str = protocol + '://' + host + ':' + str(port)
-        SocketInitiator.socket_instance.socket.connect(connection_str)
+        self.socket_instance.socket.connect(connection_str)
 
-    @sio.on('connect')
-    def on_connect():
-        print('[Connected]')
-        SocketInitiator.socket_instance.on_connect()
+    # @sio.on('connect')
+    def on_connect(self):
+        # print('[Connected] "' + self.socket_instance.name + '" is online')
+        self.socket_instance.on_connect()
 
-    @sio.on('reconnect')
-    def on_reconnect(self):
-        print('[Reconnected]')
-        SocketInitiator.socket_instance.on_reconnect()
+    # @sio.on('reconnect')
+    # def on_reconnect(self):
+    #     print('[Reconnected]')
+    #     SocketInitiator.socket_instance.on_reconnect()
 
-    @sio.on('disconnect')
-    def on_disconnect(self):
-        print('[Disconnected]')
-        SocketInitiator.socket_instance.on_disconnect()
+    # @sio.on('disconnect')
+    # def on_disconnect(self):
+    #     print('[Disconnected]')
+    #     SocketInitiator.socket_instance.on_disconnect()
 
-    @sio.on('ERROR')
-    def on_error(self):
-        Logger.error('oops, something wrong.')
-        SocketInitiator.socket_instance.__on_error__()
+    # @sio.on('ERROR')
+    # def on_error(self):
+    #     Logger.error('oops, something wrong.')
+    #     SocketInitiator.socket_instance.__on_error__()
 
-    @sio.on('*')
-    def any_event(event, sid, data):
+    # @sio.on('*')
+    def any_event(self, event, sid, data, data2):
         print('received event', event, sid, data)
         # SocketInitiator.socket_instance.on(event, data)
 
@@ -102,7 +105,7 @@ class SocketInstance(Socket):
 
     
     def on_connect(self):
-        Logger.log("connected to message queue server")
+        Logger.log("(" + self.name + ") connected to message queue server")
 
         self.connected = True
         self.socket.on('ERROR', self.__on_error__)

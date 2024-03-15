@@ -33,7 +33,7 @@ class Publisher(Subscriber):
         
         if (event is None):
             if (self.eventDefault is None):
-                raise Exception("please specifiy event")
+                raise Exception("please specify event")
             else:
                  event = self.eventDefault   
 

@@ -82,8 +82,8 @@ class SocketInitiator():
     #     SocketInitiator.socket_instance.__on_error__()
 
     # @sio.on('*')
-    def any_event(self, event, sid, data, data2):
-        print('received event', event, sid, data)
+    def any_event(self, event, sid):
+        print('received event', sid)
         # SocketInitiator.socket_instance.on(event, data)
 
 class SocketInstance(Socket):

@@ -53,7 +53,7 @@ class SocketInitiator():
         self.socket_instance = socket_base
         self.socket_instance.socket = socketio.Client(); # SocketInitiator.sio
         self.socket_instance.on('connect', self.on_connect)
-        self.socket_instance.on('*', self.any_event)
+        # self.socket_instance.on('*', self.any_event)
         
         # SocketInitiator.socket_instance.socket.on('connect', self.on_connect)
 
@@ -83,7 +83,7 @@ class SocketInitiator():
 
     # @sio.on('*')
     def any_event(self, event, sid):
-        print('received event', sid)
+        print('received event:', event, sid)
         # SocketInitiator.socket_instance.on(event, data)
 
 class SocketInstance(Socket):
@@ -167,6 +167,12 @@ class SocketInstance(Socket):
     def disconnect(self):
         if (self.socket is not None and self.connected):
             self.socket.disconnect()
+
+    def off(self, event):
+        if (self.socket is None):
+            raise Exception("Socket is not created yet")
+        else:
+            self.socket.off(event)
 
     def on(self, event, callback):
         if (self.socket is None):

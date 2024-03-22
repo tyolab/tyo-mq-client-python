@@ -40,7 +40,7 @@ class Subscriber(SocketInstance):
             func = self.consumes[event]
             self.__trigger_consume_event(message, event, func)
         except :
-            Logger.error("Ooops, something wrong", sys.exc_info()[0])
+            Logger.error("Oops, something wrong", sys.exc_info()[0])
             raise
     #     Logger.debug(event, ":", json.dumps(message))
     #     callback(message)
@@ -79,7 +79,7 @@ class Subscriber(SocketInstance):
             if (self.consumes is None):
                 self.consumes = {}
     
-            consumerEventStr = Events.to_consumer_event(eventStr)
+            consumerEventStr = Events.to_consumer_event(eventStr, who, is_all)
             self.consumes[consumerEventStr] = onConsumeCallback #lambda message, fromWhom : onConsumeCallback(message, fromWhom)
             #lambda obj : lambda obj, event=eventStr, callback=onConsumeCallback : self.__trigger_consume_event(obj, event, callback)
 
@@ -90,7 +90,8 @@ class Subscriber(SocketInstance):
             #self.on(consumeEventStr, self.__debug_on_message)
             #futureFunc = lambda data : self.__debug_on_message(data)
             futureFunc = lambda data, event=consumerEventStr : self.__debug_on_message(event, data)
-            self.on(consumerEventStr, futureFunc)
+            consumeEventStr = Events.to_consume_event(consumerEventStr)
+            self.on(consumeEventStr, futureFunc)
 
     def resubscribeWhenReconnect (self, who, event, onConsumeCallback, reSubscribe = True):
 

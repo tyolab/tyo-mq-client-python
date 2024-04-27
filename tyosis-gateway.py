@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+
 import sys
+import os
 import logging
 logging.getLogger('tyosis-data').setLevel(logging.DEBUG)
 logging.basicConfig()
@@ -9,9 +11,9 @@ from tyo_mq_client.message_queue import MessageQueue
 publisher = None
 subscriber = None
 
-user = None
+login = None
 password = None
-host = None
+server = None
 
 broker = None
 
@@ -25,6 +27,8 @@ id = None
 app_name = None
 app_id = None
 
+account_type = 1
+
 server_count = 10
 
 if len(sys.argv) > 1:
@@ -34,7 +38,7 @@ if len(sys.argv) > 1:
         if first_char == '-':
             cmd = sys.argv[i][1]
             if cmd == 'h':
-                host = sys.argv[i + 1]
+                server = sys.argv[i + 1]
             elif cmd == 'p':
                 port = int(sys.argv[i + 1])
             elif cmd == 't':
@@ -48,18 +52,20 @@ if len(sys.argv) > 1:
                     mq_port = int(sys.argv[i + 1])
                 elif cmd == 'mq-protocol':
                     mq_protocol = sys.argv[i + 1]
-                elif cmd == 'user':
-                    user = sys.argv[i + 1]
+                elif cmd == 'login':
+                    login = sys.argv[i + 1]
                 elif cmd == 'password':
                     password = sys.argv[i + 1]
-                elif cmd == 'host':
-                    host = sys.argv[i + 1]
+                elif cmd == 'server':
+                    server = sys.argv[i + 1]
                 elif cmd == 'id':
                     id = sys.argv[i + 1]
                 elif cmd == 'server-count':
                     server_count = int(sys.argv[i + 1])
                 elif cmd == 'broker':
                     broker = sys.argv[i + 1]
+                elif cmd == 'account_type':
+                    account_type = int(sys.argv[i + 1])
                 
                 elif cmd == 'help':
                     print('Usage: tyosis-gateway.py [options]')
@@ -73,13 +79,13 @@ if len(sys.argv) > 1:
                     print('  --help            Display this help message')
                     sys.exit()
                 
-if user is None:
+if login is None:
     sys.exit('User is required')
 
 if password is None:
     sys.exit('Password is required')
 
-if host is None:
+if server is None:
     sys.exit('Host is required')
 
 if id is None:
@@ -94,6 +100,14 @@ server_id = "tyostocks-server-producer"
 
 app_name = "tyosis-data"
 app_id = app_name + id
+
+broker_info_dict = {}
+broker_info_dict["broker"] = broker
+broker_info_dict["account"] = login
+broker_info_dict["account_type"] = account_type     #/**   * 0 - raw  * 1 - standard  */
+broker_info_dict["app_id"] = app_id
+
+symbols = None
 
 def on_command (message):
     print ("received command: " + message)
@@ -188,6 +202,9 @@ def handle_command (message):
         #         Thread.Sleep(1000);
         #     }
         # }
+    elif (cmd == 'symbols'):
+        print ("getting symbols")
+
     
         # subscribe("TYO")
 
@@ -227,4 +244,123 @@ subscriber.add_on_connect_listener(subscriber_on_connect)
 publisher.connect(-1, transports=['websocket'])
 subscriber.connect(-1)
 
-publisher.socket.wait()
+#####################################################
+# Now start the terminal
+import MetaTrader5 as mt5
+def get_data_file (date, symbol, market, timeframe, create_dir = False):
+    # (DateTime date, string symbol, string market, int timeframe, bool create_dir = false) 
+    # {
+    #     var minutes_dir = (timeframe > 1 ? timeframe.ToString() : "") + "minutes";
+    #     var dir = "data" + Path.DirectorySeparatorChar.ToString() + 
+    #                 minutes_dir + Path.DirectorySeparatorChar.ToString() +
+    #                 market + Path.DirectorySeparatorChar.ToString() +
+    #                 symbol + Path.DirectorySeparatorChar.ToString() +
+    #                 date.Year + Path.DirectorySeparatorChar.ToString();
+    #     if (!File.Exists(dir) && create_dir) {
+    #         try {
+    #             Directory.CreateDirectory(dir);
+    #         }
+    #         catch (Exception e) {
+    #             Logger.error("Error creating directory: " + dir + ", error: " + e.Message);
+    #             Logger.error(e);
+    #         }
+    #     }
+    #     return (dir +
+    #                 date.ToString("yyyyMMdd") + ".txt");
+    # }
+    minutes_dir = str(timeframe) if timeframe > 1 else ""
+    dir = "data" + os.path.sep + minutes_dir + os.path.sep + market + os.path.sep + symbol + os.path.sep + str(date.year) + os.path.sep
+    if not os.path.exists(dir) and create_dir:
+        try:
+            os.makedirs(dir)
+        except Exception as e:
+            print("Error creating directory: " + dir + ", error: " + e)
+            print(e)
+    return dir + date.strftime("%Y%m%d") + ".txt"
+
+def load_data(symbol, market, prefix, suffix, period, delay):
+    print ("loading data for " + symbol)
+
+def subscribe_quote (symbol):
+    print ("subscribing to the quote: " + symbol)
+####################################################################
+
+
+# path = "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
+timeout = 10000
+portable = False
+# establish connection to the MetaTrader 5 terminal
+if not mt5.initialize(portable=portable, timeout=timeout):
+    print("initialize() failed, error code =",mt5.last_error())
+    quit()
+
+# display data on the MetaTrader 5 package
+terminal_info = mt5.terminal_info()
+# TerminalInfo(community_account=True,
+#              community_connection=False, connected=True,
+#              dlls_allowed=False, trade_allowed=False,
+#              tradeapi_disabled=False,email_enabled=False, 
+#              ftp_enabled=False, notifications_enabled=False, 
+#              mqid=True, build=3391,
+#              maxbars=100000, codepage=0, ping_last=258801,
+#              community_balance=0.0, retransmission=0.0, 
+#              company='FXOpen Investments Inc.', name='MetaTrader 5 - FXOpen',
+#              language='English', path='your path', data_path='your data path', 
+#              commondata_path='your common data path')
+
+ 
+# connect to the trade account specifying a password and a server
+authorized=mt5.login(login, password=password, server=server)
+if authorized:
+    # get account information
+    # display trading account data in the form of a dictionary
+    account_info = mt5.account_info()._asdict()
+    # for prop in account_info_dict:
+    #     print("  {}={}".format(prop, account_info_dict[prop]))
+    # print()
+    # Example output:
+    # login=25115284
+    # trade_mode=0
+    # leverage=100
+    # limit_orders=200
+    # margin_so_mode=0
+    # trade_allowed=True
+    # trade_expert=True
+    # margin_mode=2
+    # currency_digits=2
+    # fifo_close=False
+    # balance=99511.4
+    # credit=0.0
+    # profit=41.82
+    # equity=99553.22
+    # margin=98.18
+    # margin_free=99455.04
+    # margin_level=101398.67590140559
+    # margin_so_call=50.0
+    # margin_so_so=30.0
+    # margin_initial=0.0
+    # margin_maintenance=0.0
+    # assets=0.0
+    # liabilities=0.0
+    # commission_blocked=0.0
+    # server=MetaQuotes-Demo
+    # currency=USD
+    # company=MetaQuotes Software Corp.
+
+    # get all symbols information
+    # get all symbols
+    symbols=mt5.symbols_get()
+    # print('Symbols: ', len(symbols))
+    # count=0
+    # # display the first five ones
+    # for s in symbols:
+    #     count+=1
+    #     print("{}. {}".format(count,s.name))
+    #     if count==5: break
+    # print()
+
+    publisher.socket.wait()
+else: 
+    print("Failed to connect to the trade account with error code =",mt5.last_error())
+    mt5.shutdown()
+    sys.exit(1)

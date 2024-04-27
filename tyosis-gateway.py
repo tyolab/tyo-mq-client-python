@@ -106,6 +106,89 @@ def handle_command (message):
     cmd = parts[0]
     if (cmd == 'subscribe'):
         print ("subscribing to the quote" + parts[1])
+    elif (cmd == 'unsubscribe'):
+        print ("unsubscribing to the quote" + parts[1])
+    elif (cmd == 'order'):
+        print ("sending order: " + parts[1])
+        # if (parts.Length < 4) {
+        #         Console.WriteLine("Invalid order command, need at least 5 parameters including command, symbol,order type and volume, optional price (if not market buy/sell), stop loss, take profit and comment");
+        #         return -1;
+        #     }
+
+        #     var type = Int32.Parse(parts[2]);
+        #     var volume = Double.Parse(parts[3]);
+            
+        #     var price = 0.0;
+        #     if (parts.Length > 4) {
+        #         price = Double.Parse(parts[4]);
+        #     }
+
+        #     double stop_loss = 0.0;
+        #     double take_profit = 0.0;
+        #     if (parts.Length > 5) {
+        #         stop_loss = Double.Parse(parts[5]);
+        #     }
+        #     if (parts.Length > 6) {
+        #         take_profit = Double.Parse(parts[6]);
+        #     }
+        #     string comment = "";
+        #     if (parts.Length > 7) {
+        #         comment = parts[7];
+        #     }
+
+        #     var order = place_order(
+        #         parts[1], // symbol
+        #         type, // tyosis order type
+        #         price, // price
+        #         volume, // volume / lots
+        #         stop_loss, // stop loss
+        #         take_profit, // take profit
+        #         comment // comment
+        #     );
+    elif (cmd == 'close'):
+        print ("closing order: " + parts[1])
+    elif (cmd == 'closeall'):
+        print ("closing all orders")
+    elif (cmd == 'load'):
+        print ("loading historical data")
+        #         // load data
+        # // we will have a full month worth of data (1 minute interval)
+        # //
+        # var symbol = parts[1];
+        # var market = parts[2];
+        # var prefix = parts.Length > 3 ? parts[3] : "";
+        # var suffix = parts.Length > 4 ? parts[4] : "";
+        # var period = parts.Length > 5 ? Int32.Parse(parts[5]) : 7;
+        # var delay = parts.Length > 6 ? Int32.Parse(parts[6]) : 20;
+
+        # if (prefix == ".")
+        #     prefix = "";
+
+        # if (suffix == ".")
+        #     suffix = "";
+
+        # Thread t = new Thread(() => {
+        #     load_data(symbol, market, prefix, suffix, period, delay);
+        # });
+    elif (cmd == 'opened'):
+        print ("getting opened orders")
+        #         var orders = mt5.get_opened_orders();
+        # if (null != orders) {
+        #     foreach (var order in orders) {
+        #         Console.WriteLine("Opened Order, ticket: " + order.Ticket + ", symbol: " + order.Symbol + ", volume: " + order.Lots + ", price: " + order.OpenPrice + ", type: " + order.OrderType + ", profit: " + order.Profit + ", profit rate: " + order.ProfitRate + ", open time: " + order.OpenTime);
+
+        #         Thread t = new Thread(() => {
+        #             string msg = $"{{\"ticket\": {order.Ticket}, \"symbol\": \"{order.Symbol}\", \"volume\": {order.Lots}, \"price\": {order.OpenPrice}, \"type\": {mt5.to_type(order.OrderType)}, \"stop_loss\": {order.StopLoss}, \"take_profit\": {order.TakeProfit}, \"comment\": \"{order.Comment}\", \"profit\": {order.Profit}, \"profit_rate\": {order.ProfitRate}, \"open_time\": \"{order.OpenTime}\"}}";
+        #             #if DEBUG
+        #             Console.WriteLine("Sending existing order message: " + msg);
+        #             #endif
+        #             publisher.produce(JsonEncodedText.Encode(msg).ToString(), "new_order");
+        #         });
+        #         t.Start();
+        #         Thread.Sleep(1000);
+        #     }
+        # }
+    
         # subscribe("TYO")
 
 def on_quote_update(quote):

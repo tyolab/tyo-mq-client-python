@@ -13,6 +13,9 @@ from datetime import timedelta, datetime
 
 from tyo_mq_client.message_queue import MessageQueue
 
+import constants
+from models import market_symbol
+
 publisher = None
 subscriber = None
 
@@ -115,6 +118,7 @@ broker_info_dict["app_id"] = app_id
 symbols = None
 # Set Type
 symbols_subscribed = set()
+symbols_last_update_dict = {}
 
 def on_command (message):
     print ("received command: " + message)
@@ -127,6 +131,21 @@ def handle_command (message):
     cmd = parts[0]
     if (cmd == 'subscribe'):
         print ("subscribing to the quote" + parts[1])
+        subscribe_to_symbols = parts[1].split(',')
+        for symbol in subscribe_to_symbols:
+            tokens = symbol.split(',')
+            broker_symbol = None
+            market = None
+            a_symbol= None
+            if len(tokens) > 2:
+                broker_symbol = tokens[2]
+                market = tokens[1]
+            elif len(tokens) > 1:
+                market = tokens[1]
+            a_symbol = tokens[0]
+            subscribe_quote(symbol)
+
+
     elif (cmd == 'unsubscribe'):
         print ("unsubscribing to the quote" + parts[1])
     elif (cmd == 'order'):
@@ -248,10 +267,7 @@ subscriber = mq.createConsumer(app_id, mq_host, mq_port, mq_protocol)
 publisher.add_on_connect_listener(producer_on_connect)
 subscriber.add_on_connect_listener(subscriber_on_connect)
 
-publisher.connect(-1, transports=['websocket'])
-subscriber.connect(-1)
-
-#####################################################
+import threading
 # Now start the terminal
 import MetaTrader5 as mt5
 import pytz
@@ -300,29 +316,61 @@ def subscribe_quote (symbol):
 
 def get_tick_update(symbol):
     print ("getting tick update for symbol: " + symbol)
-    utc_from = datetime.now(timezone) - timedelta(seconds=6)
+    # Most servers set the time to UTC+3
+    server_now = datetime.now(timezone) + timedelta(hours=3) # UTC+3;
+    utc_from = None
+    # check if exists in symbols_last_update_dict
+    if symbol in symbols_last_update_dict:
+        utc_from = symbols_last_update_dict[symbol]
+    else:
+        utc_from = server_now - timedelta(minutes=2)
+        symbols_last_update_dict[symbol] = utc_from
+
     # print the time (utc_from)
+    print("UTC Time:", server_now)
     print("From UTC Time:", utc_from)
     # var symbol = "BTCUSD";
-    ticks = mt5.copy_ticks_from(symbol, utc_from, 10, mt5.COPY_TICKS_ALL)
-    print("Ticks received:",len(ticks))
-    print("Displaying the last 10 ticks:")
-    for tick in ticks[:10]:
+    ticks = mt5.copy_ticks_from(symbol, utc_from, 100, mt5.COPY_TICKS_ALL)
+    if ticks is None or len(ticks) == 0:
+        print("No ticks received from ", utc_from, "for ", symbol)
+        return
+    
+    print("Ticks received:", len(ticks))
+    # print("Displaying the last 10 ticks:")
+    count = 0
+    # for tick in ticks[:10]:
+    # loop ticks from top to bottom
+    for tick in reversed(ticks):
         # print the time of the tick
         # named time, bid, ask, last and flags 
-        time = datetime.datetime(tick[0])
+        # convert ecpoch to datetime
+        time = datetime.fromtimestamp(tick[0])
+        # conver time to native with timezone
+        time = time.astimezone(timezone)
+
+        if count == 0:
+            symbols_last_update_dict[symbol] = time
+
         # print(time, tick[1], tick[2], tick[3], tick[4])
+        # format print
+        print("#", count, "Time: ", time, "Bid: ", tick[1], "Ask: ", tick[2], "Last: ", tick[3], "Flags: ", tick[4])
+
+        # break when time is older than utc_from
+        if time < utc_from:
+            # print("Breaking the loop")
+            break
+        count += 1
 
 # Check updates for all subscribed symbols
 def check_updates():
     print ("checking for updates") 
     for symbol in symbols_subscribed:
         # get_tick_update(symbol)
-        threading.Thread(target=get_tick_update, args=("BTCUSD",)).start()
+        threading.Thread(target=get_tick_update, args=(symbol,)).start()
+    set_timer()
 
-def timer():
-    threading.Timer(5.0, timer).start()
-    check_updates()       
+def set_timer():
+    threading.Timer(5.0, check_updates).start()     
 
 ####################################################################
 
@@ -408,9 +456,15 @@ if authorized:
     print()
 
     # threading.Thread(target=get_tick_update, args=("BTCUSD",)).start()
-    symbols_subscribed.add("BTCUSD")
+    # symbols_subscribed.add("BTCUSD")
+    # symbols_subscribed.add("FMG")
+    symbols_subscribed.add("ASX200")
+    symbols_subscribed.add("AUDUSD")
+    symbols_subscribed.add("NDX100")
+    symbols_subscribed.add("XAUUSD")
+    symbols_subscribed.add("EURUSD")
 
-    timer()
+    set_timer()
 
     # publisher.socket.wait()
 else: 

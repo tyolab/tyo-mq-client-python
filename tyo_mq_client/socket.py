@@ -58,7 +58,7 @@ class SocketInitiator():
         # SocketInitiator.socket_instance.socket.on('connect', self.on_connect)
 
     def connect(self, protocol, host, port):
-        connection_str = protocol + '://' + host + ':' + str(port)
+        connection_str = protocol + '://' + host + ':' + str(port) + "/"
         self.socket_instance.socket.connect(connection_str)
 
     # @sio.on('connect')

@@ -19,7 +19,7 @@ ready = [False, False]
 
 mq = MessageQueue()
 
-server='localhost'
+server='mqserver'
 
 print("Connecting to the tyo-mq server: {}".format(server))
 
@@ -30,9 +30,10 @@ print("Connecting to the tyo-mq server: {}".format(server))
 # Test Subscriber
 # subscriber = mq.createSubscriber("TYO Lab Tester")
 
-# Test Producer
-producer = mq.createPublisher("TYO Lab")
 event = "tyo-lab-event-test"
+
+# Test Producer
+producer = mq.createPublisher("TYO Lab", event, server, 17352, "websocket")
 # producer.host = "https://c-its-emulator.herokuapp.com:443"
 # producer.port = None
 subscriber = mq.createConsumer("TYO Lab Tester", server, 17352, "websocket")

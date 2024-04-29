@@ -20,7 +20,8 @@ from tyo_mq_client.message_queue import MessageQueue
 
 import constants
 from cache import cache
-from models import market_symbol
+from models.market_symbol import market_symbol
+from models.symbol_quote import symbol_quote
 
 publisher = None
 subscriber = None

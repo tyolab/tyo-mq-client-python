@@ -44,6 +44,7 @@ app_name = None
 app_id = None
 
 account_type = 1
+gmt_offset = 0
 
 server_count = 10
 
@@ -82,6 +83,8 @@ if len(sys.argv) > 1:
                     broker = sys.argv[i + 1]
                 elif cmd == 'account_type':
                     account_type = int(sys.argv[i + 1])
+                elif cmd == 'gmt_offset':
+                    gmt_offset = int(sys.argv[i + 1])
                 
                 elif cmd == 'help':
                     print('Usage: tyosis-gateway.py [options]')
@@ -94,6 +97,8 @@ if len(sys.argv) > 1:
                     print('  --mq-protocol <protocol>  Message Queue Protocol')
                     print('  --help            Display this help message')
                     sys.exit()
+                else:
+                    sys.exit('Invalid command: ' + cmd)
                 
 if account is None:
     sys.exit('Login is required')
@@ -160,20 +165,22 @@ def handle_command (message):
         subscribe_to_symbols = parts[1].split(',')
         for symbol in subscribe_to_symbols:
             tokens = symbol.split(':')
-            broker_symbol = None
+
+            broker_symbol =  tokens[0]
             market = None
             a_symbol= None
-            if len(tokens) > 2:
-                broker_symbol = tokens[2]
-                market = tokens[1]
-            elif len(tokens) > 1:
-                market = tokens[1]
-            a_symbol = tokens[0]
 
             if len(tokens) > 1:
-                cache.update_market_symbol(a_symbol, market, broker_symbol)
+                market = tokens[1]
+                
+                if len(tokens) > 2:
+                    a_symbol = tokens[2]
+                else:
+                    a_symbol = broker_symbol
 
-            subscribe_quote(a_symbol)
+                cache.update_market_symbol(broker_symbol, market, a_symbol)
+
+            subscribe_quote(broker_symbol)
 
     elif (cmd == 'unsubscribe'):
         print ("unsubscribing to the quote" + parts[1])
@@ -328,37 +335,81 @@ def get_data_file (date, symbol, market, timeframe, create_dir = False):
 def load_data(symbol, market, prefix, suffix, period, delay):
     print ("loading data for " + symbol)
 
-def subscribe_quote (symbol):
-    print ("subscribing to the quote: " + symbol)
-    symbols_subscribed.add(symbol)
+def subscribe_quote (broker_symbol):
+    print ("subscribing to the quote: ", broker_symbol)
+    symbols_subscribed.add(broker_symbol)
 
-def get_tick_update(symbol):
-    print ("getting tick update for symbol: " + symbol)
+def get_data_file (time, symbol, market, timeframe, create_file):
+    # (DateTime time, string symbol, string market, int timeframe, bool create_file = false) {
+    #     var minutes_dir = (timeframe > 1 ? timeframe.ToString() : "") + "minutes";
+    #     var dir = "data" + Path.DirectorySeparatorChar.ToString() + 
+    #                 minutes_dir + Path.DirectorySeparatorChar.ToString() +
+    #                 market + Path.DirectorySeparatorChar.ToString() +
+    #                 symbol + Path.DirectorySeparatorChar.ToString() +
+    #                 time.Year + Path.DirectorySeparatorChar.ToString();
+    #     if (!File.Exists(dir) && create_file) {
+    #         try {
+    #             Directory.CreateDirectory(dir);
+    #         }
+    #         catch (Exception e) {
+    #             Logger.error("Error creating directory: " + dir + ", error: " + e.Message);
+    #             Logger.error(e);
+    #         }
+    #     }
+    #     return (dir +
+    #                 time.ToString("yyyyMMdd") + ".txt");
+    # }
+    minutes_dir = str(timeframe) if timeframe > 1 else ""
+    dir = "data" + os.path.sep + minutes_dir + os.path.sep + market + os.path.sep + symbol + os.path.sep + str(time.year) + os.path.sep
+    if not os.path.exists(dir) and create_file:
+        try:
+            os.makedirs(dir)
+        except Exception as e:
+            print("Error creating directory: " + dir + ", error: " + e)
+            print(e)
+    return dir + time.strftime("%Y%m%d") + ".txt"
+
+def get_tick_update(broker_symbol):
+
+    market_symbol = cache.market_symbols[broker_symbol]
+    market = market_symbol.market
+    if market is None:
+        print ("Market not found for symbol: " + broker_symbol)
+        return
+    
+    symbol = market_symbol.symbol
+    if symbol is None:
+        print ("Standard ymbol not found for symbol: " + broker_symbol)
+        return
+
+    # print ("getting tick update for symbol: " + symbol)
     # Most servers set the time to UTC+3
     server_now = datetime.now(timezone) + timedelta(hours=3) # UTC+3;
     utc_from = None
     # check if exists in symbols_last_update_dict
-    if symbol in symbols_last_update_dict:
-        utc_from = symbols_last_update_dict[symbol]
+    if broker_symbol in symbols_last_update_dict:
+        utc_from = symbols_last_update_dict[broker_symbol]
     else:
         utc_from = server_now - timedelta(minutes=2)
-        symbols_last_update_dict[symbol] = utc_from
+        symbols_last_update_dict[broker_symbol] = utc_from
 
     # print the time (utc_from)
-    print("UTC Time:", server_now)
-    print("From UTC Time:", utc_from)
+    # print("UTC Time:", server_now)
+    # print("From UTC Time:", utc_from)
     # var symbol = "BTCUSD";
-    ticks = mt5.copy_ticks_from(symbol, utc_from, 100, mt5.COPY_TICKS_ALL)
+    ticks = mt5.copy_ticks_from(broker_symbol, utc_from, 100, mt5.COPY_TICKS_ALL)
     if ticks is None or len(ticks) == 0:
-        print("No ticks received from ", utc_from, "for ", symbol)
+        # print("No ticks received from ", utc_from, "for ", symbol)
         return
     
-    print("Ticks received:", len(ticks))
+    # print("Ticks received:", len(ticks))
     # print("Displaying the last 10 ticks:")
-    count = 0
+    # count = 0
+    time = None
     # for tick in ticks[:10]:
     # loop ticks from top to bottom
-    for tick in reversed(ticks):
+    # for tick in reversed(ticks):
+    for tick in ticks:
         # print the time of the tick
         # named time, bid, ask, last and flags 
         # convert ecpoch to datetime
@@ -366,18 +417,89 @@ def get_tick_update(symbol):
         # conver time to native with timezone
         time = time.astimezone(timezone)
 
-        if count == 0:
-            symbols_last_update_dict[symbol] = time
-
         # print(time, tick[1], tick[2], tick[3], tick[4])
         # format print
-        print("#", count, "Time: ", time, "Bid: ", tick[1], "Ask: ", tick[2], "Last: ", tick[3], "Flags: ", tick[4])
+        quote = symbol_quote(broker_symbol)
+        quote.bid = tick[1]
+        quote.ask = tick[2]
+        quote.time = time
+        quote.last = tick[3]
+        quote.volume = tick[4]
+        # tick[5] is time_msc
+        flags = tick[6]
+        # tick[7] is volume_real
+
+        print("Quote:", broker_symbol, "Time: ", time, "Bid: ", tick[1], "Ask: ", tick[2], "Last: ", tick[3], "Flags: ", tick[4])
+
+        ohlcs = cache.update(quote, broker, market, gmt_offset)
+        if ohlcs is not None:
+            # we have at least one minute bar
+            bar = ohlcs[0]
+            # bar.span = "m1"
+            print("Bar (m1):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+            message = bar.to_json()
+            publisher.produce(message, "quote")
+
+            if ohlcs[1] is not None:
+                bar = ohlcs[1]
+                bar.span = "m15"
+
+                print("Bar (m15):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+                message = bar.to_json()
+                publisher.produce(message, "quote")
+
+                try:
+                    # save the bar to a file
+
+                    #                    try {                                                             
+                    #     // #2
+                    #     // we need to matching the server time while writing the data into the file
+                    #     // because sometime we need to load data from server in case we missed some data
+                    #     DateTime server_time = DateTime.UtcNow.AddHours(gmt_offset);
+
+                    #     var file_name = get_data_file(server_time, symbol, market, 15, true);     
+
+                    #     Logger.log("Saving 15 minute data to Persistent Storage: " + market + " " + symbol + " " + server_time.ToString("yyyyMMdd HH:mm") + " " + ohlc.Open + " " + ohlc.High + " " + ohlc.Low + " " + ohlc.Close + " " + ohlc.Volume + " to file: " + System.IO.Path.GetFullPath(file_name) + "");
+
+                    #     using (StreamWriter writer = File.AppendText(file_name))
+                    #     {
+                    #         writer.WriteLine(ohlc_to_string(ohlc, gmt_offset));
+                    #     }
+                    # }
+                    # catch (Exception e) {
+                    #     Logger.error("Error saving the 15 minutes data: " + e.Message);
+                    #     Logger.error(e);
+                    # }
+                    # convert the above code to python
+                    # server_time = datetime.now() + timedelta(hours=gmt_offset)
+                    file_name = get_data_file(bar.time, symbol, market, 15, True)
+                    print("Saving 15 minute data to Persistent Storage: ", market, symbol, bar.time.strftime("%Y%m%d %H:%M"), bar.open, bar.high, bar.low, bar.close, bar.volume, "to file: ", os.path.abspath(file_name))
+                    line = bar.to_line()
+                    with open(file_name, "a") as writer:
+                        writer.write(line + "\n")
+
+                except Exception as e:
+                    print("Error saving the 15 minutes data: ", e)
+                    print(e)
+
+            if ohlcs[2] is not None:
+                bar = ohlcs[2]
+                # bar.span = "D"
+                # we will get EOD stock market data from another channel
+                # do nothing yet 
+
+                # print("Bar (day):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+                # message = bar.to_json()
+                # publisher.produce(message, "quote")
 
         # break when time is older than utc_from
         if time < utc_from:
             # print("Breaking the loop")
             break
-        count += 1
+        # count += 1
+
+    # last tick time
+    symbols_last_update_dict[broker_symbol] = time
 
 # Check updates for all subscribed symbols
 def check_updates():

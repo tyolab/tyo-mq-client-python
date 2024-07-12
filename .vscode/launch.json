@@ -17,6 +17,20 @@
             "program": "${file}"
         },
         {
+            "name": "Python: tyosis-gateway.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tyosis-gateway.py",
+            "args": [
+                "--mq-server", "mqserver",
+                "--broker", "eightcap",
+                "--login", "2421194",
+                "--password", "whqPTNt8", 
+                "--server", "Eightcap-Demo",
+                "--id", "8"
+            ]
+        },
+        {
             "name": "Python: Attach",
             "type": "python",
             "request": "attach",

@@ -6,18 +6,34 @@ import logging
 logging.getLogger('tyosis-data').setLevel(logging.DEBUG)
 logging.basicConfig()
 
+import threading
+# Now start the terminal
+import MetaTrader5 as mt5
+import pytz
+
+import json
+
+import threading
+from datetime import timedelta, datetime
+
 from tyo_mq_client.message_queue import MessageQueue
+
+import constants
+from cache import cache
+from models.market_symbol import market_symbol
+from models.symbol_quote import symbol_quote
 
 publisher = None
 subscriber = None
 
-login = None
+account = None
 password = None
 server = None
 
 broker = None
 
 # checking the parameters
+mq = None
 mq_host = 'localhost'
 mq_port = 17352
 mq_protocol = 'websocket'
@@ -28,6 +44,7 @@ app_name = None
 app_id = None
 
 account_type = 1
+gmt_offset = 0
 
 server_count = 10
 
@@ -46,14 +63,14 @@ if len(sys.argv) > 1:
             elif cmd == '-':
                 # long command, substring the first 2 characters
                 cmd = sys.argv[i][2:]
-                if cmd == 'mq-host':
+                if cmd == 'mq-server':
                     mq_host = sys.argv[i + 1]
                 elif cmd == 'mq-port':
                     mq_port = int(sys.argv[i + 1])
                 elif cmd == 'mq-protocol':
                     mq_protocol = sys.argv[i + 1]
                 elif cmd == 'login':
-                    login = sys.argv[i + 1]
+                    account = int(sys.argv[i + 1])
                 elif cmd == 'password':
                     password = sys.argv[i + 1]
                 elif cmd == 'server':
@@ -66,6 +83,8 @@ if len(sys.argv) > 1:
                     broker = sys.argv[i + 1]
                 elif cmd == 'account_type':
                     account_type = int(sys.argv[i + 1])
+                elif cmd == 'gmt_offset':
+                    gmt_offset = int(sys.argv[i + 1])
                 
                 elif cmd == 'help':
                     print('Usage: tyosis-gateway.py [options]')
@@ -73,14 +92,16 @@ if len(sys.argv) > 1:
                     print('  -h <host>         Message Queue Host')
                     print('  -p <port>         Message Queue Port')
                     print('  -t <protocol>     Message Queue Protocol')
-                    print('  --mq-host <host>  Message Queue Host')
+                    print('  --mq-server <host>  Message Queue Host')
                     print('  --mq-port <port>  Message Queue Port')
                     print('  --mq-protocol <protocol>  Message Queue Protocol')
                     print('  --help            Display this help message')
                     sys.exit()
+                else:
+                    sys.exit('Invalid command: ' + cmd)
                 
-if login is None:
-    sys.exit('User is required')
+if account is None:
+    sys.exit('Login is required')
 
 if password is None:
     sys.exit('Password is required')
@@ -103,23 +124,64 @@ app_id = app_name + id
 
 broker_info_dict = {}
 broker_info_dict["broker"] = broker
-broker_info_dict["account"] = login
+broker_info_dict["account"] = account
 broker_info_dict["account_type"] = account_type     #/**   * 0 - raw  * 1 - standard  */
 broker_info_dict["app_id"] = app_id
 
 symbols = None
+# Set Type
+symbols_subscribed = set()
+symbols_last_update_dict = {}
+
+# mt5 = None
+timezone = pytz.timezone("Etc/UTC")
 
 def on_command (message):
     print ("received command: " + message)
     cmd = json.loads(message)
-    handle_command(cmd.Message)
+    to_broker = cmd['To']
+    to_broker_id = None
+    if 'ToId' in cmd:
+        cmd['ToId']
+
+    if to_broker is not None and to_broker != broker:
+        print ("Broker does not match, not for this broker: " + broker)
+        return
+    
+    if to_broker_id is None or to_broker_id == -1:
+        pass
+    else:
+        if to_broker_id != id:
+            print ("Broker ID does not match, not for this broker: " + broker + " ID: " + to_broker_id)
+
+    handle_command(cmd['Message'])
 
 def handle_command (message):
     # split the message by space
     parts = message.split(' ')
     cmd = parts[0]
     if (cmd == 'subscribe'):
-        print ("subscribing to the quote" + parts[1])
+        print ("subscribing ", parts[1])
+        subscribe_to_symbols = parts[1].split(',')
+        for symbol in subscribe_to_symbols:
+            tokens = symbol.split(':')
+
+            broker_symbol =  tokens[0]
+            market = None
+            a_symbol= None
+
+            if len(tokens) > 1:
+                market = tokens[1]
+                
+                if len(tokens) > 2:
+                    a_symbol = tokens[2]
+                else:
+                    a_symbol = broker_symbol
+
+                cache.update_market_symbol(broker_symbol, market, a_symbol)
+
+            subscribe_quote(broker_symbol)
+
     elif (cmd == 'unsubscribe'):
         print ("unsubscribing to the quote" + parts[1])
     elif (cmd == 'order'):
@@ -209,11 +271,7 @@ def handle_command (message):
         # subscribe("TYO")
 
 def on_quote_update(quote):
-    print ("received quote: " + quote)
-           
-def subscribe(symbol):
-    print ("subscribing to the quote")
-    
+    print ("received quote: " + quote)      
 
 ###################### END #######################
     
@@ -234,19 +292,15 @@ def producer_on_connect () :
     # Logger.log("Producer is connected")
     print ("Producer is connected")
 
-mq = MessageQueue()
-publisher = mq.createPublisher(app_name, "quote", mq_host, mq_port, mq_protocol)
-subscriber = mq.createConsumer(app_id, mq_host, mq_port, mq_protocol)
+def connect_to_mq():
+    print ("Connecting to the message queue host " + mq_host + " on port " + str(mq_port) + " using protocol " + mq_protocol)
 
-publisher.add_on_connect_listener(producer_on_connect)
-subscriber.add_on_connect_listener(subscriber_on_connect)
+    publisher.add_on_connect_listener(producer_on_connect)
+    subscriber.add_on_connect_listener(subscriber_on_connect)
 
-publisher.connect(-1, transports=['websocket'])
-subscriber.connect(-1)
+    publisher.connect(-1)
+    subscriber.connect(-1)
 
-#####################################################
-# Now start the terminal
-import MetaTrader5 as mt5
 def get_data_file (date, symbol, market, timeframe, create_dir = False):
     # (DateTime date, string symbol, string market, int timeframe, bool create_dir = false) 
     # {
@@ -281,86 +335,295 @@ def get_data_file (date, symbol, market, timeframe, create_dir = False):
 def load_data(symbol, market, prefix, suffix, period, delay):
     print ("loading data for " + symbol)
 
-def subscribe_quote (symbol):
-    print ("subscribing to the quote: " + symbol)
+def subscribe_quote (broker_symbol):
+    print ("subscribing to the quote: ", broker_symbol)
+    symbols_subscribed.add(broker_symbol)
+
+def get_data_file (time, symbol, market, timeframe, create_file):
+    # (DateTime time, string symbol, string market, int timeframe, bool create_file = false) {
+    #     var minutes_dir = (timeframe > 1 ? timeframe.ToString() : "") + "minutes";
+    #     var dir = "data" + Path.DirectorySeparatorChar.ToString() + 
+    #                 minutes_dir + Path.DirectorySeparatorChar.ToString() +
+    #                 market + Path.DirectorySeparatorChar.ToString() +
+    #                 symbol + Path.DirectorySeparatorChar.ToString() +
+    #                 time.Year + Path.DirectorySeparatorChar.ToString();
+    #     if (!File.Exists(dir) && create_file) {
+    #         try {
+    #             Directory.CreateDirectory(dir);
+    #         }
+    #         catch (Exception e) {
+    #             Logger.error("Error creating directory: " + dir + ", error: " + e.Message);
+    #             Logger.error(e);
+    #         }
+    #     }
+    #     return (dir +
+    #                 time.ToString("yyyyMMdd") + ".txt");
+    # }
+    minutes_dir = str(timeframe) if timeframe > 1 else ""
+    dir = "data" + os.path.sep + minutes_dir + os.path.sep + market + os.path.sep + symbol + os.path.sep + str(time.year) + os.path.sep
+    if not os.path.exists(dir) and create_file:
+        try:
+            os.makedirs(dir)
+        except Exception as e:
+            print("Error creating directory: " + dir + ", error: " + e)
+            print(e)
+    return dir + time.strftime("%Y%m%d") + ".txt"
+
+def get_tick_update(broker_symbol):
+
+    market_symbol = cache.market_symbols[broker_symbol]
+    market = market_symbol.market
+    if market is None:
+        print ("Market not found for symbol: " + broker_symbol)
+        return
+    
+    symbol = market_symbol.symbol
+    if symbol is None:
+        print ("Standard ymbol not found for symbol: " + broker_symbol)
+        return
+
+    # print ("getting tick update for symbol: " + symbol)
+    # Most servers set the time to UTC+3
+    server_now = datetime.now(timezone) + timedelta(hours=3) # UTC+3;
+    utc_from = None
+    # check if exists in symbols_last_update_dict
+    if broker_symbol in symbols_last_update_dict:
+        utc_from = symbols_last_update_dict[broker_symbol]
+    else:
+        utc_from = server_now - timedelta(minutes=2)
+        symbols_last_update_dict[broker_symbol] = utc_from
+
+    # print the time (utc_from)
+    # print("UTC Time:", server_now)
+    # print("From UTC Time:", utc_from)
+    # var symbol = "BTCUSD";
+    ticks = mt5.copy_ticks_from(broker_symbol, utc_from, 100, mt5.COPY_TICKS_ALL)
+    if ticks is None or len(ticks) == 0:
+        # print("No ticks received from ", utc_from, "for ", symbol)
+        return
+    
+    # print("Ticks received:", len(ticks))
+    # print("Displaying the last 10 ticks:")
+    # count = 0
+    time = None
+    # for tick in ticks[:10]:
+    # loop ticks from top to bottom
+    # for tick in reversed(ticks):
+    for tick in ticks:
+        # print the time of the tick
+        # named time, bid, ask, last and flags 
+        # convert ecpoch to datetime
+        time = datetime.fromtimestamp(tick[0])
+        # conver time to native with timezone
+        time = time.astimezone(timezone)
+
+        # print(time, tick[1], tick[2], tick[3], tick[4])
+        # format print
+        quote = symbol_quote(broker_symbol)
+        quote.bid = tick[1]
+        quote.ask = tick[2]
+        quote.time = time
+        quote.last = tick[3]
+        quote.volume = tick[4]
+        # tick[5] is time_msc
+        flags = tick[6]
+        # tick[7] is volume_real
+
+        print("Quote:", broker_symbol, "Time: ", time, "Bid: ", tick[1], "Ask: ", tick[2], "Last: ", tick[3], "Flags: ", tick[4])
+
+        ohlcs = cache.update(quote, broker, market, gmt_offset)
+        if ohlcs is not None:
+            # we have at least one minute bar
+            bar = ohlcs[0]
+            # bar.span = "m1"
+            print("Bar (m1):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+            message = bar.to_json()
+            publisher.produce(message, "quote")
+
+            if ohlcs[1] is not None:
+                bar = ohlcs[1]
+                bar.span = "m15"
+
+                print("Bar (m15):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+                message = bar.to_json()
+                publisher.produce(message, "quote")
+
+                try:
+                    # save the bar to a file
+
+                    #                    try {                                                             
+                    #     // #2
+                    #     // we need to matching the server time while writing the data into the file
+                    #     // because sometime we need to load data from server in case we missed some data
+                    #     DateTime server_time = DateTime.UtcNow.AddHours(gmt_offset);
+
+                    #     var file_name = get_data_file(server_time, symbol, market, 15, true);     
+
+                    #     Logger.log("Saving 15 minute data to Persistent Storage: " + market + " " + symbol + " " + server_time.ToString("yyyyMMdd HH:mm") + " " + ohlc.Open + " " + ohlc.High + " " + ohlc.Low + " " + ohlc.Close + " " + ohlc.Volume + " to file: " + System.IO.Path.GetFullPath(file_name) + "");
+
+                    #     using (StreamWriter writer = File.AppendText(file_name))
+                    #     {
+                    #         writer.WriteLine(ohlc_to_string(ohlc, gmt_offset));
+                    #     }
+                    # }
+                    # catch (Exception e) {
+                    #     Logger.error("Error saving the 15 minutes data: " + e.Message);
+                    #     Logger.error(e);
+                    # }
+                    # convert the above code to python
+                    # server_time = datetime.now() + timedelta(hours=gmt_offset)
+                    file_name = get_data_file(bar.time, symbol, market, 15, True)
+                    print("Saving 15 minute data to Persistent Storage: ", market, symbol, bar.time.strftime("%Y%m%d %H:%M"), bar.open, bar.high, bar.low, bar.close, bar.volume, "to file: ", os.path.abspath(file_name))
+                    line = bar.to_line()
+                    with open(file_name, "a") as writer:
+                        writer.write(line + "\n")
+
+                except Exception as e:
+                    print("Error saving the 15 minutes data: ", e)
+                    print(e)
+
+            if ohlcs[2] is not None:
+                bar = ohlcs[2]
+                # bar.span = "D"
+                # we will get EOD stock market data from another channel
+                # do nothing yet 
+
+                # print("Bar (day):", bar.symbol, bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume, market)
+                # message = bar.to_json()
+                # publisher.produce(message, "quote")
+
+        # break when time is older than utc_from
+        if time < utc_from:
+            # print("Breaking the loop")
+            break
+        # count += 1
+
+    # last tick time
+    symbols_last_update_dict[broker_symbol] = time
+
+# Check updates for all subscribed symbols
+def check_updates():
+    # print ("checking for updates") 
+    for symbol in symbols_subscribed:
+        # get_tick_update(symbol)
+        threading.Thread(target=get_tick_update, args=(symbol,)).start()
+    set_timer()
+
+def set_timer():
+    threading.Timer(5.0, check_updates).start()     
+
 ####################################################################
 
+def main():
+    # display data on the MetaTrader 5 package
+    print("MetaTrader5 package author: ", mt5.__author__)
+    print("MetaTrader5 package version: ", mt5.__version__)
 
-# path = "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
-timeout = 10000
-portable = False
-# establish connection to the MetaTrader 5 terminal
-if not mt5.initialize(portable=portable, timeout=timeout):
-    print("initialize() failed, error code =",mt5.last_error())
-    quit()
+    # C:\Program Files\MetaTrader 5
+    path = "C:\\Program Files\\EightCap MetaTrader 5\\terminal64.exe"	# path to MetaTrader 5 terminal
+    # path = "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
+    timeout = 1000000
+    portable = False
+    # establish connection to the MetaTrader 5 terminal
+    # login=login, password=password, portable=portable, timeout=timeout, 
+    if not mt5.initialize(path=path, portable=portable, timeout=timeout):
+        print("initialize() failed, error code =",mt5.last_error())
+        quit()
 
-# display data on the MetaTrader 5 package
-terminal_info = mt5.terminal_info()
-# TerminalInfo(community_account=True,
-#              community_connection=False, connected=True,
-#              dlls_allowed=False, trade_allowed=False,
-#              tradeapi_disabled=False,email_enabled=False, 
-#              ftp_enabled=False, notifications_enabled=False, 
-#              mqid=True, build=3391,
-#              maxbars=100000, codepage=0, ping_last=258801,
-#              community_balance=0.0, retransmission=0.0, 
-#              company='FXOpen Investments Inc.', name='MetaTrader 5 - FXOpen',
-#              language='English', path='your path', data_path='your data path', 
-#              commondata_path='your common data path')
+    # display data on the MetaTrader 5 package
+    terminal_info = mt5.terminal_info()
+    print("MetaTrader 5 package:",terminal_info)
+    # TerminalInfo(community_account=True,
+    #              community_connection=False, connected=True,
+    #              dlls_allowed=False, trade_allowed=False,
+    #              tradeapi_disabled=False,email_enabled=False, 
+    #              ftp_enabled=False, notifications_enabled=False, 
+    #              mqid=True, build=3391,
+    #              maxbars=100000, codepage=0, ping_last=258801,
+    #              community_balance=0.0, retransmission=0.0, 
+    #              company='FXOpen Investments Inc.', name='MetaTrader 5 - FXOpen',
+    #              language='English', path='your path', data_path='your data path', 
+    #              commondata_path='your common data path')
 
- 
-# connect to the trade account specifying a password and a server
-authorized=mt5.login(login, password=password, server=server)
-if authorized:
-    # get account information
-    # display trading account data in the form of a dictionary
-    account_info = mt5.account_info()._asdict()
-    # for prop in account_info_dict:
-    #     print("  {}={}".format(prop, account_info_dict[prop]))
-    # print()
-    # Example output:
-    # login=25115284
-    # trade_mode=0
-    # leverage=100
-    # limit_orders=200
-    # margin_so_mode=0
-    # trade_allowed=True
-    # trade_expert=True
-    # margin_mode=2
-    # currency_digits=2
-    # fifo_close=False
-    # balance=99511.4
-    # credit=0.0
-    # profit=41.82
-    # equity=99553.22
-    # margin=98.18
-    # margin_free=99455.04
-    # margin_level=101398.67590140559
-    # margin_so_call=50.0
-    # margin_so_so=30.0
-    # margin_initial=0.0
-    # margin_maintenance=0.0
-    # assets=0.0
-    # liabilities=0.0
-    # commission_blocked=0.0
-    # server=MetaQuotes-Demo
-    # currency=USD
-    # company=MetaQuotes Software Corp.
+    
+    # connect to the trade account specifying a password and a server
+    print("Login to the trade account with login={}, password={}, server={}".format(account, password, server))
+    authorized=mt5.login(account, password=password, server=server, timeout=timeout)
+    if authorized:
+        print("Login successful")
+        # get account information
+        # display trading account data in the form of a dictionary
+        account_info = mt5.account_info()._asdict()
+        for prop in account_info:
+            print("  {}={}".format(prop, account_info[prop]))
+        print()
+        # Example output:
+        # login=25115284
+        # trade_mode=0
+        # leverage=100
+        # limit_orders=200
+        # margin_so_mode=0
+        # trade_allowed=True
+        # trade_expert=True
+        # margin_mode=2
+        # currency_digits=2
+        # fifo_close=False
+        # balance=99511.4
+        # credit=0.0
+        # profit=41.82
+        # equity=99553.22
+        # margin=98.18
+        # margin_free=99455.04
+        # margin_level=101398.67590140559
+        # margin_so_call=50.0
+        # margin_so_so=30.0
+        # margin_initial=0.0
+        # margin_maintenance=0.0
+        # assets=0.0
+        # liabilities=0.0
+        # commission_blocked=0.0
+        # server=MetaQuotes-Demo
+        # currency=USD
+        # company=MetaQuotes Software Corp.
 
-    # get all symbols information
-    # get all symbols
-    symbols=mt5.symbols_get()
-    # print('Symbols: ', len(symbols))
-    # count=0
-    # # display the first five ones
-    # for s in symbols:
-    #     count+=1
-    #     print("{}. {}".format(count,s.name))
-    #     if count==5: break
-    # print()
+        # get all symbols information
+        # get all symbols
+        symbols=mt5.symbols_get()
+        print('Symbols: ', len(symbols))
+        count=0
+        # # display the first five ones
+        for s in symbols:
+            count+=1
+            print("{}. {}".format(count,s.name))
+            if count==5: 
+                print(s)
+                break
+        print()
 
-    publisher.socket.wait()
-else: 
-    print("Failed to connect to the trade account with error code =",mt5.last_error())
-    mt5.shutdown()
-    sys.exit(1)
+        # threading.Thread(target=get_tick_update, args=("BTCUSD",)).start()
+        # symbols_subscribed.add("BTCUSD")
+        # symbols_subscribed.add("FMG")
+        # symbols_subscribed.add("ASX200")
+        # symbols_subscribed.add("AUDUSD")
+        # symbols_subscribed.add("NDX100")
+        # symbols_subscribed.add("XAUUSD")
+        # symbols_subscribed.add("EURUSD")
+
+        set_timer()
+
+        print("Waiting for updates")
+    else: 
+        print("Failed to connect to the trade account with error code =", mt5.last_error())
+        # mt5.shutdown()
+        # sys.exit(1)
+
+mq = MessageQueue()
+publisher = mq.createPublisher(app_name, "quote", mq_host, mq_port, mq_protocol)
+subscriber = mq.createConsumer(app_id, mq_host, mq_port, mq_protocol)        
+
+connect_to_mq()
+
+main()
+
+publisher.socket.wait()
+subscriber.socket.wait()    

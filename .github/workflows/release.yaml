@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create a new release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #   tag: ${{ github.ref_name }}
+        run: |
+          python setup.py sdist \
+          twine upload dist/*

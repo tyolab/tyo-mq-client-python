@@ -72,6 +72,13 @@ producer.connect(-1)
 
 ```
 
+## Publish tyo-mq-client-python to pypi
+
+```bash
+python setup.py sdist
+twine upload dist/*
+```
+
 ## Maintainer
 
 [Eric Tang](https://twitter.com/_e_tang) @ [TYO LAB](http://tyo.com.au)

@@ -9,14 +9,14 @@ import json, sys
 class Subscriber(SocketInstance):
 
     #
-    def __init__(self, name=None, host=None, port=None, protocol=None):
-        super(Subscriber, self).__init__(host, port, protocol)
+    def __init__(self, name=None, host=None, port=None, protocol=None, logger=None):
+        super(Subscriber, self).__init__(host, port, protocol, logger)
 
         self.type = 'CONSUMER'
         self.name = name if name is not None else Constants.ANONYMOUS
         self.consumes = None
         self.subscriptions = None
-        Logger.debug("creating subscriber: " + self.name)
+        self.logger.debug("creating subscriber: " + self.name)
 
     # def send_identification_info(self):
     #     self.send_message(, {'name': self.name})
@@ -35,18 +35,18 @@ class Subscriber(SocketInstance):
     # For debug
     # 
     def __debug_on_message(self, event, message):
-        Logger.debug('received message', event, message)
+        self.logger.debug('received message', event, message)
         try:
             func = self.consumes[event]
             self.__trigger_consume_event(message, event, func)
         except :
-            Logger.error("Oops, something wrong", sys.exc_info()[0])
+            self.logger.error("Oops, something wrong", sys.exc_info()[0])
             raise
-    #     Logger.debug(event, ":", json.dumps(message))
+    #     self.logger.debug(event, ":", json.dumps(message))
     #     callback(message)
 
     # def __debug_on_message(self, *args):
-    #     Logger.debug('received message', args)
+    #     self.logger.debug('received message', args)
 
     def __subscribe_internal(self, who, event = None, onConsumeCallback = None):    
             eventStr = None
@@ -86,7 +86,7 @@ class Subscriber(SocketInstance):
             #futureFunc = lambda data : (lambda data, event=consumeEventStr: self.consumes[event](data))(data)
             #futureFunc = lambda data, eventStr=consumeEventStr : self.consumes[eventStr](data)
             #DEBUG
-            Logger.debug("setting on event: " + consumerEventStr)
+            self.logger.debug("setting on event: " + consumerEventStr)
             #self.on(consumeEventStr, self.__debug_on_message)
             #futureFunc = lambda data : self.__debug_on_message(data)
             futureFunc = lambda data, event=consumerEventStr : self.__debug_on_message(event, data)

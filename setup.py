@@ -10,7 +10,7 @@ DESCRIPTION = '\n\n'.join(LOAD_TEXT(_) for _ in [
 ])
 setup(
     name='tyo-mq-client',
-    version='0.0.6',
+    version='0.0.7',
     description='A tyo-mq client library',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',
@@ -23,10 +23,10 @@ setup(
     ],
     keywords='tyo-mq socket.io node.js pub/sub publisher/subscriber',
     author='Eric Tang',
-    author_email='eric.tang@tyo.com.au',
+    author_email='eric@tyo.com.au',
     url='https://github.com/tyolab/tyo-mq-client-python.git',
     install_requires=[
-        'socketIO-client>=0.7.2',
+        'python-socketio[client]>=4.6.1',
         'invisibleroads-macros>=0.9.4.4'
     ],
     tests_require=[

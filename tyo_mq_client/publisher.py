@@ -9,8 +9,8 @@ from .events import Events
 import json
 
 class Publisher(Subscriber):
-    def __init__(self, name, eventDefault=None, host=None, port=None, protocol=None):
-        super(Publisher, self).__init__(name, host, port, protocol)
+    def __init__(self, name, eventDefault=None, host=None, port=None, protocol=None, logger=None):
+        super(Publisher, self).__init__(name, host, port, protocol, logger)
 
         self.type = 'PRODUCER'
         self.eventDefault = eventDefault if eventDefault is not None else Events.to_event_string(Constants.EVENT_DEFAULT, self.name)
@@ -22,7 +22,7 @@ class Publisher(Subscriber):
         self.add_on_connect_listener(futureFunc)
 
         #
-        Logger.debug("creating producer: " + self.name)
+        self.logger.debug("creating producer: " + self.name)
 
     def broadcast (self, data, event=None):
         self.produce(data, event, Constants.METHOD_BROADCAST)
@@ -44,7 +44,7 @@ class Publisher(Subscriber):
     #  * On Subscribe
     #  */
     def __on_subscription (self, data) :
-        Logger.log("Received subscription information: " + json.dumps(data))
+        self.logger.log("Received subscription information: " + json.dumps(data))
 
         self.subscribers[data["id"]] = data
 
@@ -60,7 +60,7 @@ class Publisher(Subscriber):
     #  * On Lost connections with subscriber(s)
     #  */
     def __on_lost_subscriber (self, callback, data) :
-        Logger.log("Lost subscriber's connection")
+        self.logger.log("Lost subscriber's connection")
         if (callback is not None):
             callback(data)
 

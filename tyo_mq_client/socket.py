@@ -13,7 +13,8 @@ import uuid
 class Socket(Base):
     
     #
-    def __init__(self, host=None, port=None, protocol=None):
+    def __init__(self, host=None, port=None, protocol=None, logger=None):
+        super().__init__(logger)
         self.type = 'RAW'
 
         self.autoreconnect = True
@@ -58,7 +59,7 @@ class SocketInitiator():
         # SocketInitiator.socket_instance.socket.on('connect', self.on_connect)
 
     def connect(self, protocol, host, port):
-        connection_str = protocol + '://' + host + ':' + str(port)
+        connection_str = protocol + '://' + host + ':' + str(port) + "/"
         self.socket_instance.socket.connect(connection_str)
 
     # @sio.on('connect')
@@ -78,18 +79,18 @@ class SocketInitiator():
 
     # @sio.on('ERROR')
     # def on_error(self):
-    #     Logger.error('oops, something wrong.')
+    #     self.logger.error('oops, something wrong.')
     #     SocketInitiator.socket_instance.__on_error__()
 
     # @sio.on('*')
     def any_event(self, event, sid):
-        print('received event:', event, sid)
+        self.logger.debug('received event:', event, sid)
         # SocketInitiator.socket_instance.on(event, data)
 
 class SocketInstance(Socket):
 
-    def __init__(self, host=None, port=None, protocol=None):
-        super().__init__(host, port, protocol)
+    def __init__(self, host=None, port=None, protocol=None, logger=None):
+        super().__init__(host, port, protocol, logger)
 
         # self.socket = sio
         self.initiator = SocketInitiator(self)
@@ -105,7 +106,7 @@ class SocketInstance(Socket):
 
     
     def on_connect(self):
-        Logger.log("(" + self.name + ") connected to message queue server")
+        self.logger.log("(" + self.name + ") connected to message queue server")
 
         self.connected = True
         self.socket.on('ERROR', self.__on_error__)
@@ -120,11 +121,11 @@ class SocketInstance(Socket):
 
     def on_disconnect(self):
         self.connected = False
-        #Logger.debug('disconnect')
-        Logger.log("Socket (" + self.get_id() + ") is disconnected")
+        #self.logger.debug('disconnect')
+        self.logger.log("Socket (" + self.get_id() + ") is disconnected")
 
     def on_reconnect(self):
-        Logger.debug('reconnect')
+        self.logger.debug('reconnect')
 
         
     #
@@ -134,7 +135,7 @@ class SocketInstance(Socket):
         if (self.on_error_listener is not None):
             self.on_error_listener()
         else:
-            Logger.error(msg)
+            self.logger.error(msg)
 
     #
     #

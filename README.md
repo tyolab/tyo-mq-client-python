@@ -89,8 +89,10 @@ compatibility with existing users of this client. (The Node.js client is
 
 Node.js (and browsers) ships with the [server package](https://github.com/tyolab/tyo-mq);
 see also [Go](https://github.com/tyolab/tyo-mq-client-go),
-[C#](https://github.com/tyolab/tyo-mq-client-csharp), and
-[Java](https://github.com/tyolab/tyo-mq-client-java).
+[Rust](https://github.com/tyolab/tyo-mq-client-rust),
+[C/C++](https://github.com/tyolab/tyo-mq-client-cpp),
+[Java](https://github.com/tyolab/tyo-mq-client-java), and
+[C#](https://github.com/tyolab/tyo-mq-client-csharp).
 
 ## License
 
